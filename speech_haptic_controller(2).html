@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speech → Haptic Controller</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #242736;
+    --border: #2e3248; --accent: #6c8ef7; --accent2: #a78bfa;
+    --green: #34d399; --red: #f87171; --amber: #fbbf24;
+    --text: #e2e8f0; --muted: #8892a4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+  h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; }
+  .layout { display: grid; grid-template-columns: 340px 1fr; grid-template-rows: auto 1fr; gap: 12px; padding: 16px; min-height: 100vh; }
+  .header { grid-column: 1/-1; display: flex; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; }
+  .header h1 { font-size: 16px; font-weight: 700; flex: 1; }
+  .badge { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: var(--surface2); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot.amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .dot.red { background: var(--red); }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .left { display: flex; flex-direction: column; gap: 12px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: 8px; padding: 4px; margin-bottom: 14px; }
+  .tab { flex: 1; padding: 6px; text-align: center; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--muted); transition: all .15s; }
+  .tab.active { background: var(--accent); color: #fff; }
+
+  /* Connection */
+  .field { margin-bottom: 10px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .field input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: var(--text); font-size: 13px; outline: none; }
+  .field input:focus { border-color: var(--accent); }
+  .btn { padding: 8px 16px; border-radius: 6px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+  .btn:hover { opacity: .85; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.danger { background: var(--red); color: #fff; }
+  .btn.ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn.sm { padding: 5px 10px; font-size: 12px; }
+  .btn-row { display: flex; gap: 8px; }
+
+  /* Triggers */
+  .trigger-add { display: flex; gap: 8px; margin-bottom: 12px; }
+  .trigger-add input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: var(--text); font-size: 13px; outline: none; }
+  .trigger-add input:focus { border-color: var(--accent); }
+  .trigger-list { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
+  .trigger-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .trigger-card.firing { border-color: var(--accent2); background: #1e1b35; animation: pulse .3s ease; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+  .trigger-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .trigger-phrase { flex: 1; font-weight: 600; font-size: 13px; }
+  .trigger-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mini-field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 3px; }
+  .mini-field select, .mini-field input[type=number] { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 5px 7px; color: var(--text); font-size: 12px; outline: none; }
+
+  /* Right side */
+  .right { display: flex; flex-direction: column; gap: 12px; }
+  .transcript-box { flex: 1; background: var(--surface2); border-radius: 8px; padding: 14px; min-height: 180px; max-height: 220px; overflow-y: auto; font-size: 15px; line-height: 1.7; }
+  .transcript-box .interim { color: var(--muted); font-style: italic; }
+  .transcript-box mark { background: #3b2f7a; color: var(--accent2); border-radius: 3px; padding: 0 3px; }
+  .mic-btn { width: 100%; padding: 14px; font-size: 15px; font-weight: 700; border-radius: 8px; border: none; cursor: pointer; transition: all .2s; background: var(--surface2); color: var(--muted); border: 2px solid var(--border); }
+  .mic-btn.listening { background: #1a2e1a; color: var(--green); border-color: var(--green); box-shadow: 0 0 20px #34d39920; animation: breathe 2s ease infinite; }
+  @keyframes breathe { 0%,100%{box-shadow:0 0 20px #34d39920} 50%{box-shadow:0 0 40px #34d39940} }
+  .log { background: var(--bg); border-radius: 8px; padding: 12px; font-size: 12px; font-family: monospace; max-height: 160px; overflow-y: auto; color: var(--muted); }
+  .log .entry { padding: 2px 0; border-bottom: 1px solid #1a1d27; }
+  .log .entry.ok { color: var(--green); }
+  .log .entry.warn { color: var(--amber); }
+  .log .entry.fire { color: var(--accent2); }
+  .log .entry.err { color: var(--red); }
+  .confidence-bar { height: 4px; background: var(--surface2); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+  .confidence-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: width .3s; }
+  .no-speech { color: var(--muted); font-style: italic; font-size: 13px; text-align: center; margin-top: 40px; }
+  #esp-info { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  #esp-info code { background: var(--bg); padding: 1px 4px; border-radius: 3px; color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>🎤 Speech → Haptic Controller</h1>
+    <div class="badge" id="badge-mic"><div class="dot" id="dot-mic"></div><span id="label-mic">Mic off</span></div>
+    <div class="badge" id="badge-conn"><div class="dot" id="dot-conn"></div><span id="label-conn">Disconnected</span></div>
+    <div class="badge" id="badge-fire" style="opacity:0"><div class="dot amber"></div><span>⚡ Trigger!</span></div>
+  </div>
+
+  <!-- LEFT COLUMN -->
+  <div class="left">
+
+    <!-- CONNECTION PANEL -->
+    <div class="panel">
+      <h2>ESP32 Connection</h2>
+      <div class="tabs">
+        <div class="tab active" id="tab-ws" onclick="switchTab('ws')">WebSocket</div>
+        <div class="tab" id="tab-ble" onclick="switchTab('ble')">Bluetooth (BLE)</div>
+      </div>
+
+      <div id="pane-ws">
+        <div class="field">
+          <label>ESP32 WebSocket URL</label>
+          <input type="text" id="ws-url" value="ws://192.168.1.100:81" placeholder="ws://192.168.x.x:81">
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" onclick="wsConnect()">Connect</button>
+          <button class="btn ghost" onclick="wsDisconnect()">Disconnect</button>
+          <button class="btn ghost sm" onclick="sendTest()">Test</button>
+        </div>
+        <p id="esp-info">ESP32 should run a WebSocket server on port <code>81</code>. Receives JSON: <code>{"cmd":"vibrate","duration":500,"pattern":"single"}</code></p>
+      </div>
+
+      <div id="pane-ble" style="display:none">
+        <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">Connects to ESP32 BLE UART (Nordic UART Service). ESP32 receives the same JSON commands over Serial.</p>
+        <div class="btn-row">
+          <button class="btn primary" onclick="bleConnect()">Scan & Connect</button>
+          <button class="btn ghost" onclick="bleDisconnect()">Disconnect</button>
+          <button class="btn ghost sm" onclick="sendTest()">Test</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRIGGER WORDS PANEL -->
+    <div class="panel" style="flex:1">
+      <h2>Trigger Phrases</h2>
+      <div class="trigger-add">
+        <input type="text" id="new-phrase" placeholder="e.g. stop  or  watch out" onkeydown="if(event.key==='Enter')addTrigger()">
+        <button class="btn primary sm" onclick="addTrigger()">Add</button>
+      </div>
+      <div class="trigger-list" id="trigger-list"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="right">
+
+    <!-- SPEECH PANEL -->
+    <div class="panel">
+      <h2>Live Transcript</h2>
+      <div class="transcript-box" id="transcript"><div class="no-speech">Press the button below to start listening…</div></div>
+      <div class="confidence-bar"><div class="confidence-fill" id="conf-fill" style="width:0%"></div></div>
+    </div>
+
+    <button class="mic-btn" id="mic-btn" onclick="toggleMic()">🎤 Start Listening</button>
+
+    <!-- MOTOR DEFAULTS -->
+    <div class="panel">
+      <h2>Global Motor Defaults</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div class="mini-field">
+          <label>Default Duration (ms)</label>
+          <input type="number" id="g-duration" value="500" min="50" max="5000" step="50">
+        </div>
+        <div class="mini-field">
+          <label>Default Pattern</label>
+          <select id="g-pattern">
+            <option value="single">Single pulse</option>
+            <option value="double">Double pulse</option>
+            <option value="triple">Triple pulse</option>
+            <option value="long">Long buzz</option>
+            <option value="sos">SOS</option>
+          </select>
+        </div>
+        <div class="mini-field">
+          <label>PWM Intensity (0–255)</label>
+          <input type="number" id="g-intensity" value="255" min="0" max="255">
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="panel">
+      <h2>Activity Log</h2>
+      <div class="log" id="log"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let recognition = null, isListening = false;
+let ws = null, bleChar = null;
+let currentTab = 'ws';
+let triggers = [
+  { id: 1, phrase: 'stop',       duration: 500,  pattern: 'double',  intensity: 255 },
+  { id: 2, phrase: 'watch out',  duration: 800,  pattern: 'triple',  intensity: 255 },
+  { id: 3, phrase: 'look at me', duration: 300,  pattern: 'single',  intensity: 200 },
+];
+let nextId = 4;
+
+// ─── Logging ─────────────────────────────────────────────────────────────────
+function log(msg, type='ok') {
+  const el = document.getElementById('log');
+  const t = new Date().toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const d = document.createElement('div');
+  d.className = `entry ${type}`;
+  d.textContent = `[${t}] ${msg}`;
+  el.prepend(d);
+  while (el.children.length > 80) el.removeChild(el.lastChild);
+}
+
+// ─── Triggers UI ─────────────────────────────────────────────────────────────
+function renderTriggers() {
+  const list = document.getElementById('trigger-list');
+  list.innerHTML = '';
+  triggers.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'trigger-card';
+    card.id = `tcard-${t.id}`;
+    card.innerHTML = `
+      <div class="trigger-top">
+        <span class="trigger-phrase">"${t.phrase}"</span>
+        <button class="btn ghost sm" onclick="testTrigger(${t.id})">Test</button>
+        <button class="btn danger sm" onclick="removeTrigger(${t.id})">✕</button>
+      </div>
+      <div class="trigger-settings">
+        <div class="mini-field">
+          <label>Duration (ms)</label>
+          <input type="number" value="${t.duration}" min="50" max="5000" step="50"
+            onchange="updateTrigger(${t.id},'duration',+this.value)">
+        </div>
+        <div class="mini-field">
+          <label>Pattern</label>
+          <select onchange="updateTrigger(${t.id},'pattern',this.value)">
+            ${['single','double','triple','long','sos'].map(p =>
+              `<option value="${p}" ${p===t.pattern?'selected':''}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="mini-field">
+          <label>Intensity (0–255)</label>
+          <input type="number" value="${t.intensity}" min="0" max="255"
+            onchange="updateTrigger(${t.id},'intensity',+this.value)">
+        </div>
+        <div class="mini-field">
+          <label>Case sensitive</label>
+          <select onchange="updateTrigger(${t.id},'caseSensitive',this.value==='true')">
+            <option value="false" ${!t.caseSensitive?'selected':''}>No</option>
+            <option value="true"  ${t.caseSensitive?'selected':''}>Yes</option>
+          </select>
+        </div>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function addTrigger() {
+  const inp = document.getElementById('new-phrase');
+  const phrase = inp.value.trim();
+  if (!phrase) return;
+  const dur = +document.getElementById('g-duration').value;
+  const pat = document.getElementById('g-pattern').value;
+  const intensity = +document.getElementById('g-intensity').value;
+  triggers.push({ id: nextId++, phrase, duration: dur, pattern: pat, intensity, caseSensitive: false });
+  inp.value = '';
+  renderTriggers();
+  log(`Added trigger: "${phrase}"`);
+}
+
+function removeTrigger(id) {
+  triggers = triggers.filter(t => t.id !== id);
+  renderTriggers();
+}
+
+function updateTrigger(id, key, val) {
+  const t = triggers.find(t => t.id === id);
+  if (t) t[key] = val;
+}
+
+function testTrigger(id) {
+  const t = triggers.find(t => t.id === id);
+  if (t) fireTrigger(t);
+}
+
+// ─── Speech Recognition ───────────────────────────────────────────────────────
+function setupRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { log('Speech Recognition not supported in this browser. Use Chrome.','err'); return false; }
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-GB';
+
+  recognition.onstart = () => {
+    isListening = true;
+    updateMicUI(true);
+    log('Microphone active — listening…');
+  };
+  recognition.onend = () => {
+    if (isListening) recognition.start(); // auto-restart
+  };
+  recognition.onerror = e => {
+    if (e.error !== 'no-speech') log(`Speech error: ${e.error}`, 'err');
+  };
+  recognition.onresult = e => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const txt = e.results[i][0].transcript;
+      if (e.results[i].isFinal) { final += txt; }
+      else interim += txt;
+    }
+    const conf = e.results[e.results.length-1][0].confidence;
+    if (conf > 0) document.getElementById('conf-fill').style.width = (conf*100)+'%';
+
+    if (final) {
+      appendTranscript(final, true);
+      checkTriggers(final);
+    } else {
+      updateInterim(interim);
+      checkTriggers(interim); // check as words stream in, not just on final
+    }
+  };
+  return true;
+}
+
+let transcriptText = '';
+function appendTranscript(text, isFinal) {
+  transcriptText += text + ' ';
+  const box = document.getElementById('transcript');
+  // Highlight any trigger phrases
+  let highlighted = transcriptText;
+  triggers.forEach(t => {
+    const escaped = t.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const flags = t.caseSensitive ? 'g' : 'gi';
+    highlighted = highlighted.replace(new RegExp(escaped, flags), m => `<mark>${m}</mark>`);
+  });
+  box.innerHTML = highlighted + '<span class="interim" id="interim-span"></span>';
+  box.scrollTop = box.scrollHeight;
+}
+
+function updateInterim(text) {
+  const sp = document.getElementById('interim-span');
+  if (sp) sp.textContent = text;
+}
+
+function toggleMic() {
+  if (isListening) {
+    isListening = false;
+    recognition && recognition.stop();
+    updateMicUI(false);
+    log('Mic stopped.');
+  } else {
+    transcriptText = '';
+    document.getElementById('transcript').innerHTML = '';
+    if (!recognition && !setupRecognition()) return;
+    recognition.start();
+  }
+}
+
+function updateMicUI(on) {
+  const btn = document.getElementById('mic-btn');
+  const dot = document.getElementById('dot-mic');
+  const label = document.getElementById('label-mic');
+  btn.className = 'mic-btn' + (on ? ' listening' : '');
+  btn.textContent = on ? '🔴 Listening…  (click to stop)' : '🎤 Start Listening';
+  dot.className = 'dot' + (on ? ' green' : '');
+  label.textContent = on ? 'Mic active' : 'Mic off';
+}
+
+// ─── Trigger Matching ─────────────────────────────────────────────────────────
+const firedRecently = new Set();
+function checkTriggers(text) {
+  triggers.forEach(t => {
+    const haystack = t.caseSensitive ? text : text.toLowerCase();
+    const needle   = t.caseSensitive ? t.phrase : t.phrase.toLowerCase();
+    if (haystack.includes(needle)) {
+      if (!firedRecently.has(t.id)) {
+        fireTrigger(t);
+        firedRecently.add(t.id);
+        setTimeout(() => firedRecently.delete(t.id), 2000); // debounce 2s
+      }
+    }
+  });
+}
+
+function fireTrigger(t) {
+  log(`⚡ Trigger: "${t.phrase}" → ${t.pattern} ${t.duration}ms @ ${t.intensity}`, 'fire');
+  // Flash card
+  const card = document.getElementById(`tcard-${t.id}`);
+  if (card) { card.classList.add('firing'); setTimeout(()=>card.classList.remove('firing'),400); }
+  // Flash header badge
+  const badge = document.getElementById('badge-fire');
+  badge.style.opacity = '1';
+  setTimeout(() => badge.style.opacity = '0', 1000);
+  // Send command
+  sendCommand({ cmd: 'vibrate', phrase: t.phrase, duration: t.duration, pattern: t.pattern, intensity: t.intensity });
+}
+
+// ─── Communication ────────────────────────────────────────────────────────────
+function sendCommand(obj) {
+  const msg = JSON.stringify(obj);
+  if (currentTab === 'ws') {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(msg);
+      log(`WS → ${msg}`, 'ok');
+    } else {
+      log('WS not connected — command not sent', 'warn');
+    }
+  } else {
+    if (bleChar) {
+      const enc = new TextEncoder().encode(msg + '\n');
+      bleChar.writeValue(enc).then(()=> log(`BLE → ${msg}`,'ok')).catch(e=> log(`BLE send error: ${e}`,'err'));
+    } else {
+      log('BLE not connected — command not sent', 'warn');
+    }
+  }
+}
+
+function sendTest() {
+  sendCommand({ cmd: 'vibrate', phrase: 'test', duration: 300, pattern: 'double', intensity: 200 });
+}
+
+// WebSocket
+function wsConnect() {
+  const url = document.getElementById('ws-url').value.trim();
+  if (ws) ws.close();
+  log(`Connecting to ${url}…`, 'warn');
+  ws = new WebSocket(url);
+  ws.onopen  = () => { setConnUI(true, url); log(`WebSocket connected: ${url}`); };
+  ws.onclose = () => { setConnUI(false); log('WebSocket disconnected', 'warn'); };
+  ws.onerror = () => { log('WebSocket error — check ESP32 IP/port', 'err'); };
+  ws.onmessage = e => log(`ESP32 → ${e.data}`, 'ok');
+}
+function wsDisconnect() { ws && ws.close(); }
+
+// BLE (Nordic UART Service)
+const NUS_SERVICE  = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const NUS_TX_CHAR  = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write
+async function bleConnect() {
+  try {
+    log('Scanning for BLE devices…', 'warn');
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [NUS_SERVICE] }]
+    });
+    const server  = await device.gatt.connect();
+    const service = await server.getPrimaryService(NUS_SERVICE);
+    bleChar = await service.getCharacteristic(NUS_TX_CHAR);
+    device.addEventListener('gattserverdisconnected', () => { bleChar = null; setConnUI(false); log('BLE disconnected', 'warn'); });
+    setConnUI(true, device.name || 'ESP32');
+    log(`BLE connected: ${device.name}`);
+  } catch(e) { log(`BLE error: ${e.message}`, 'err'); }
+}
+function bleDisconnect() { bleChar && bleChar.service.device.gatt.disconnect(); }
+
+function setConnUI(connected, label='') {
+  document.getElementById('dot-conn').className  = 'dot' + (connected ? ' green' : '');
+  document.getElementById('label-conn').textContent = connected ? label : 'Disconnected';
+}
+
+// ─── Tab Switching ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-ws').className  = 'tab' + (tab==='ws'  ? ' active' : '');
+  document.getElementById('tab-ble').className = 'tab' + (tab==='ble' ? ' active' : '');
+  document.getElementById('pane-ws').style.display  = tab==='ws'  ? 'block' : 'none';
+  document.getElementById('pane-ble').style.display = tab==='ble' ? 'block' : 'none';
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderTriggers();
+log('Ready. Add trigger phrases, connect to ESP32, then start the mic.', 'ok');
+</script>
+</body>
+</html>
