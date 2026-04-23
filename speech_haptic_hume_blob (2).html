@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speech → Haptic Controller + Emotion</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #242736;
+    --border: #2e3248; --accent: #6c8ef7; --accent2: #a78bfa;
+    --green: #34d399; --red: #f87171; --amber: #fbbf24;
+    --text: #e2e8f0; --muted: #8892a4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+  h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; }
+  .layout { display: grid; grid-template-columns: 340px 1fr; grid-template-rows: auto 1fr; gap: 12px; padding: 16px; min-height: 100vh; }
+  .header { grid-column: 1/-1; display: flex; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; flex-wrap: wrap; }
+  .header h1 { font-size: 16px; font-weight: 700; flex: 1; }
+  .badge { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: var(--surface2); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot.amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .dot.red { background: var(--red); }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .left { display: flex; flex-direction: column; gap: 12px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: 8px; padding: 4px; margin-bottom: 14px; }
+  .tab { flex: 1; padding: 6px; text-align: center; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--muted); transition: all .15s; }
+  .tab.active { background: var(--accent); color: #fff; }
+
+  /* Connection */
+  .field { margin-bottom: 10px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .field input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: var(--text); font-size: 13px; outline: none; }
+  .field input:focus { border-color: var(--accent); }
+  .btn { padding: 8px 16px; border-radius: 6px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+  .btn:hover { opacity: .85; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.danger { background: var(--red); color: #fff; }
+  .btn.ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn.sm { padding: 5px 10px; font-size: 12px; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Triggers */
+  .trigger-add { display: flex; gap: 8px; margin-bottom: 12px; }
+  .trigger-add input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: var(--text); font-size: 13px; outline: none; }
+  .trigger-add input:focus { border-color: var(--accent); }
+  .trigger-list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; }
+  .trigger-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .trigger-card.firing { border-color: var(--accent2); background: #1e1b35; animation: pulse .3s ease; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+  .trigger-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .trigger-phrase { flex: 1; font-weight: 600; font-size: 13px; }
+  .trigger-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mini-field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 3px; }
+  .mini-field select, .mini-field input[type=number] { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 5px 7px; color: var(--text); font-size: 12px; outline: none; }
+
+  /* Right side */
+  .right { display: flex; flex-direction: column; gap: 12px; }
+  .transcript-box { flex: 1; background: var(--surface2); border-radius: 8px; padding: 14px; min-height: 140px; max-height: 180px; overflow-y: auto; font-size: 15px; line-height: 1.7; }
+  .transcript-box .interim { color: var(--muted); font-style: italic; }
+  .transcript-box mark { background: #3b2f7a; color: var(--accent2); border-radius: 3px; padding: 0 3px; }
+  .mic-btn { width: 100%; padding: 14px; font-size: 15px; font-weight: 700; border-radius: 8px; border: none; cursor: pointer; transition: all .2s; background: var(--surface2); color: var(--muted); border: 2px solid var(--border); }
+  .mic-btn.listening { background: #1a2e1a; color: var(--green); border-color: var(--green); box-shadow: 0 0 20px #34d39920; animation: breathe 2s ease infinite; }
+  @keyframes breathe { 0%,100%{box-shadow:0 0 20px #34d39920} 50%{box-shadow:0 0 40px #34d39940} }
+  .log { background: var(--bg); border-radius: 8px; padding: 12px; font-size: 12px; font-family: monospace; max-height: 130px; overflow-y: auto; color: var(--muted); }
+  .log .entry { padding: 2px 0; border-bottom: 1px solid #1a1d27; }
+  .log .entry.ok { color: var(--green); }
+  .log .entry.warn { color: var(--amber); }
+  .log .entry.fire { color: var(--accent2); }
+  .log .entry.err { color: var(--red); }
+  .log .entry.emo { color: #f0abfc; }
+  .confidence-bar { height: 4px; background: var(--surface2); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+  .confidence-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: width .3s; }
+  .no-speech { color: var(--muted); font-style: italic; font-size: 13px; text-align: center; margin-top: 40px; }
+  #esp-info { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  #esp-info code { background: var(--bg); padding: 1px 4px; border-radius: 3px; color: var(--accent); }
+
+  /* ── Emotion Blob Display ─────────────────────────────────────────── */
+  .emotion-box-wrapper { position: relative; }
+
+  #emotion-box {
+    width: 100%;
+    height: 260px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* The SVG blob canvas fills the box */
+  #blob-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Text overlaid on top of blob */
+  .emotion-label {
+    position: relative; z-index: 10;
+    font-size: 15px; font-weight: 700;
+    letter-spacing: .01em;
+    text-align: center;
+    color: rgba(0,0,0,0.75);
+    text-shadow: 0 1px 4px rgba(255,255,255,0.6);
+    pointer-events: none;
+    transition: color 0.6s ease;
+    line-height: 1.1;
+  }
+  .emotion-score {
+    position: absolute; bottom: 38px; left: 0; right: 0;
+    text-align: center; z-index: 10;
+    font-size: 10px; font-weight: 600;
+    color: rgba(0,0,0,0.45);
+    text-shadow: none;
+    pointer-events: none;
+    transition: color 0.6s;
+  }
+  .emotion-hint {
+    position: absolute; bottom: 10px; right: 14px;
+    font-size: 10px; color: rgba(0,0,0,0.2);
+    z-index: 10; pointer-events: none;
+  }
+
+  /* Mini emotion blobs row below main blob */
+  .emotion-bars {
+    display: flex; gap: 10px;
+    justify-content: center;
+    align-items: flex-end;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .emotion-bar-item {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 4px;
+    cursor: default;
+  }
+  .mini-blob-wrap {
+    width: 36px; height: 36px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mini-blob-wrap svg { width: 100%; height: 100%; }
+  .emotion-bar-item .bar-label {
+    font-size: 9px; color: var(--muted);
+    max-width: 44px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+    text-align: center;
+  }
+  .emotion-bar-item .bar-score {
+    font-size: 9px; font-weight: 700;
+    color: rgba(255,255,255,0.5);
+  }
+
+  /* Fullscreen mode */
+  #emotion-box.fullscreen {
+    position: fixed; inset: 0; z-index: 9999;
+    width: 100vw; height: 100vh;
+    border-radius: 0; border: none;
+  }
+  #emotion-box.fullscreen .emotion-label { font-size: min(11vw, 110px); }
+  #emotion-box.fullscreen .emotion-score { font-size: min(2.5vw, 24px); bottom: 60px; }
+  #emotion-box.fullscreen .emotion-hint  { font-size: 13px; bottom: 24px; right: 28px; }
+  #emotion-box.fullscreen .fs-close {
+    position: absolute; top: 20px; right: 24px;
+    font-size: 28px; cursor: pointer; z-index: 10;
+    opacity: 0.6; transition: opacity .2s;
+    background: none; border: none; color: #fff;
+  }
+  #emotion-box.fullscreen .fs-close:hover { opacity: 1; }
+
+  /* Hume connection area */
+  .hume-status { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .hume-status .dot { width: 6px; height: 6px; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>🎤 Speech → Haptic Controller</h1>
+    <div class="badge" id="badge-mic"><div class="dot" id="dot-mic"></div><span id="label-mic">Mic off</span></div>
+    <div class="badge" id="badge-conn"><div class="dot" id="dot-conn"></div><span id="label-conn">Disconnected</span></div>
+    <div class="badge" id="badge-hume"><div class="dot" id="dot-hume"></div><span id="label-hume">Hume off</span></div>
+    <div class="badge" id="badge-fire" style="opacity:0"><div class="dot amber"></div><span>⚡ Trigger!</span></div>
+  </div>
+
+  <!-- LEFT COLUMN -->
+  <div class="left">
+
+    <!-- CONNECTION PANEL -->
+    <div class="panel">
+      <h2>ESP32 Connection</h2>
+      <div class="tabs">
+        <div class="tab active" id="tab-ws" onclick="switchTab('ws')">WebSocket</div>
+        <div class="tab" id="tab-ble" onclick="switchTab('ble')">Bluetooth (BLE)</div>
+      </div>
+
+      <div id="pane-ws">
+        <div class="field">
+          <label>ESP32 WebSocket URL</label>
+          <input type="text" id="ws-url" value="ws://192.168.1.100:81" placeholder="ws://192.168.x.x:81">
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" onclick="wsConnect()">Connect</button>
+          <button class="btn ghost" onclick="wsDisconnect()">Disconnect</button>
+          <button class="btn ghost sm" onclick="sendTest()">Test</button>
+        </div>
+        <p id="esp-info">ESP32 should run a WebSocket server on port <code>81</code>. Receives JSON: <code>{"cmd":"vibrate","duration":500,"pattern":"single"}</code></p>
+      </div>
+
+      <div id="pane-ble" style="display:none">
+        <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">Connects to ESP32 BLE UART (Nordic UART Service). ESP32 receives the same JSON commands over Serial.</p>
+        <div class="btn-row">
+          <button class="btn primary" onclick="bleConnect()">Scan & Connect</button>
+          <button class="btn ghost" onclick="bleDisconnect()">Disconnect</button>
+          <button class="btn ghost sm" onclick="sendTest()">Test</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HUME AI PANEL -->
+    <div class="panel">
+      <h2>Hume AI — Voice Prosody</h2>
+      <div class="field">
+        <label>Hume API Key</label>
+        <input type="password" id="hume-key" placeholder="Paste your Hume API key…">
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="humeConnect()">Connect</button>
+        <button class="btn ghost" onclick="humeDisconnect()">Disconnect</button>
+      </div>
+      <div class="hume-status">
+        <div class="dot" id="dot-hume-inner"></div>
+        <span id="hume-status-text">Not connected — get a free key at app.hume.ai</span>
+      </div>
+    </div>
+
+    <!-- TRIGGER WORDS PANEL -->
+    <div class="panel" style="flex:1">
+      <h2>Trigger Phrases</h2>
+      <div class="trigger-add">
+        <input type="text" id="new-phrase" placeholder="e.g. stop  or  watch out" onkeydown="if(event.key==='Enter')addTrigger()">
+        <button class="btn primary sm" onclick="addTrigger()">Add</button>
+      </div>
+      <div class="trigger-list" id="trigger-list"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="right">
+
+    <!-- EMOTION BLOB DISPLAY -->
+    <div class="panel emotion-box-wrapper">
+      <h2>Emotion Colour</h2>
+      <div id="emotion-box" onclick="toggleEmotionFullscreen()">
+        <svg id="blob-svg" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="blob-blur"><feGaussianBlur stdDeviation="18"/></filter>
+          </defs>
+          <g id="blob-rings"></g>
+        </svg>
+        <span class="emotion-label" id="emo-label">Waiting…</span>
+        <span class="emotion-score" id="emo-score"></span>
+        <span class="emotion-hint">click to fullscreen</span>
+      </div>
+      <div class="emotion-bars" id="emo-bars"></div>
+    </div>
+
+    <!-- SPEECH PANEL -->
+    <div class="panel">
+      <h2>Live Transcript</h2>
+      <div class="transcript-box" id="transcript"><div class="no-speech">Press the button below to start listening…</div></div>
+      <div class="confidence-bar"><div class="confidence-fill" id="conf-fill" style="width:0%"></div></div>
+    </div>
+
+    <button class="mic-btn" id="mic-btn" onclick="toggleMic()">🎤 Start Listening</button>
+
+    <!-- MOTOR DEFAULTS -->
+    <div class="panel">
+      <h2>Global Motor Defaults</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div class="mini-field">
+          <label>Default Duration (ms)</label>
+          <input type="number" id="g-duration" value="500" min="50" max="5000" step="50">
+        </div>
+        <div class="mini-field">
+          <label>Default Pattern</label>
+          <select id="g-pattern">
+            <option value="single">Single pulse</option>
+            <option value="double">Double pulse</option>
+            <option value="triple">Triple pulse</option>
+            <option value="long">Long buzz</option>
+            <option value="sos">SOS</option>
+          </select>
+        </div>
+        <div class="mini-field">
+          <label>PWM Intensity (0–255)</label>
+          <input type="number" id="g-intensity" value="255" min="0" max="255">
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="panel">
+      <h2>Activity Log</h2>
+      <div class="log" id="log"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── Emotion → Colour Map ─────────────────────────────────────────────────────
+// Each of Hume's 48 prosody emotions mapped to a distinctive colour
+const EMOTION_COLORS = {
+  "Admiration":       { bg: "#FFD700", text: "#1a1200" },
+  "Adoration":        { bg: "#FF69B4", text: "#2a0018" },
+  "Aesthetic Appreciation": { bg: "#E6C8FF", text: "#1f0033" },
+  "Amusement":        { bg: "#FFE135", text: "#2a2200" },
+  "Anger":            { bg: "#DC2626", text: "#fff" },
+  "Annoyance":        { bg: "#EF6C00", text: "#1a0e00" },
+  "Anxiety":          { bg: "#7B1FA2", text: "#fff" },
+  "Awe":              { bg: "#1565C0", text: "#fff" },
+  "Awkwardness":      { bg: "#BCAAA4", text: "#1a1210" },
+  "Boredom":          { bg: "#607D8B", text: "#fff" },
+  "Calmness":         { bg: "#80CBC4", text: "#0a1e1c" },
+  "Concentration":    { bg: "#283593", text: "#fff" },
+  "Confusion":        { bg: "#CE93D8", text: "#1a0020" },
+  "Contemplation":    { bg: "#37474F", text: "#B0BEC5" },
+  "Contempt":         { bg: "#4A0E0E", text: "#f87171" },
+  "Contentment":      { bg: "#81C784", text: "#0a1f0b" },
+  "Craving":          { bg: "#FF8F00", text: "#1a1000" },
+  "Desire":           { bg: "#D32F2F", text: "#fff" },
+  "Determination":    { bg: "#F57F17", text: "#1a1400" },
+  "Disappointment":   { bg: "#546E7A", text: "#CFD8DC" },
+  "Disapproval":      { bg: "#880E4F", text: "#fff" },
+  "Disgust":          { bg: "#33691E", text: "#C5E1A5" },
+  "Distress":         { bg: "#B71C1C", text: "#fff" },
+  "Doubt":            { bg: "#78909C", text: "#fff" },
+  "Ecstasy":          { bg: "#FF1744", text: "#fff" },
+  "Embarrassment":    { bg: "#F48FB1", text: "#2a0015" },
+  "Empathic Pain":    { bg: "#6A1B9A", text: "#fff" },
+  "Enthusiasm":       { bg: "#FF6D00", text: "#fff" },
+  "Entrancement":     { bg: "#0D47A1", text: "#82B1FF" },
+  "Envy":             { bg: "#2E7D32", text: "#fff" },
+  "Excitement":       { bg: "#FF3D00", text: "#fff" },
+  "Fear":             { bg: "#1A0033", text: "#CE93D8" },
+  "Gratitude":        { bg: "#FFF176", text: "#2a2400" },
+  "Guilt":            { bg: "#4E342E", text: "#BCAAA4" },
+  "Horror":           { bg: "#0D0D0D", text: "#f87171" },
+  "Interest":         { bg: "#0097A7", text: "#fff" },
+  "Joy":              { bg: "#FFEB3B", text: "#1a1800" },
+  "Love":             { bg: "#E91E63", text: "#fff" },
+  "Nostalgia":        { bg: "#A1887F", text: "#fff" },
+  "Pain":             { bg: "#6D0000", text: "#ffcdd2" },
+  "Pride":            { bg: "#6A1B9A", text: "#E1BEE7" },
+  "Realization":      { bg: "#00BCD4", text: "#00272e" },
+  "Relief":           { bg: "#A5D6A7", text: "#0a1f0b" },
+  "Romance":          { bg: "#C2185B", text: "#fff" },
+  "Sadness":          { bg: "#1A237E", text: "#9FA8DA" },
+  "Sarcasm":          { bg: "#F9A825", text: "#1a1400" },
+  "Satisfaction":     { bg: "#66BB6A", text: "#0a1f0b" },
+  "Shame":            { bg: "#3E2723", text: "#D7CCC8" },
+  "Surprise (negative)": { bg: "#FF6F00", text: "#fff" },
+  "Surprise (positive)": { bg: "#00E5FF", text: "#001a1f" },
+  "Sympathy":         { bg: "#7986CB", text: "#fff" },
+  "Tiredness":        { bg: "#455A64", text: "#B0BEC5" },
+  "Triumph":          { bg: "#FFD600", text: "#1a1400" },
+};
+
+// Fallback for unknown emotions
+function getEmotionColor(name) {
+  return EMOTION_COLORS[name] || { bg: "#6c8ef7", text: "#fff" };
+}
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let recognition = null, isListening = false;
+let ws = null, bleChar = null;
+let currentTab = 'ws';
+let triggers = [
+  { id: 1, phrase: 'stop',       duration: 500,  pattern: 'double',  intensity: 255 },
+  { id: 2, phrase: 'watch out',  duration: 800,  pattern: 'triple',  intensity: 255 },
+  { id: 3, phrase: 'look at me', duration: 300,  pattern: 'single',  intensity: 200 },
+];
+let nextId = 4;
+
+// Hume
+let humeWs = null;
+let humeMediaRecorder = null;
+let humeStream = null;
+let humeSendInterval = null;
+let isHumeConnected = false;
+let audioChunks = [];
+
+// ─── Logging ─────────────────────────────────────────────────────────────────
+function log(msg, type='ok') {
+  const el = document.getElementById('log');
+  const t = new Date().toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const d = document.createElement('div');
+  d.className = `entry ${type}`;
+  d.textContent = `[${t}] ${msg}`;
+  el.prepend(d);
+  while (el.children.length > 80) el.removeChild(el.lastChild);
+}
+
+// ─── Triggers UI ─────────────────────────────────────────────────────────────
+function renderTriggers() {
+  const list = document.getElementById('trigger-list');
+  list.innerHTML = '';
+  triggers.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'trigger-card';
+    card.id = `tcard-${t.id}`;
+    card.innerHTML = `
+      <div class="trigger-top">
+        <span class="trigger-phrase">"${t.phrase}"</span>
+        <button class="btn ghost sm" onclick="testTrigger(${t.id})">Test</button>
+        <button class="btn danger sm" onclick="removeTrigger(${t.id})">✕</button>
+      </div>
+      <div class="trigger-settings">
+        <div class="mini-field">
+          <label>Duration (ms)</label>
+          <input type="number" value="${t.duration}" min="50" max="5000" step="50"
+            onchange="updateTrigger(${t.id},'duration',+this.value)">
+        </div>
+        <div class="mini-field">
+          <label>Pattern</label>
+          <select onchange="updateTrigger(${t.id},'pattern',this.value)">
+            ${['single','double','triple','long','sos'].map(p =>
+              `<option value="${p}" ${p===t.pattern?'selected':''}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="mini-field">
+          <label>Intensity (0–255)</label>
+          <input type="number" value="${t.intensity}" min="0" max="255"
+            onchange="updateTrigger(${t.id},'intensity',+this.value)">
+        </div>
+        <div class="mini-field">
+          <label>Case sensitive</label>
+          <select onchange="updateTrigger(${t.id},'caseSensitive',this.value==='true')">
+            <option value="false" ${!t.caseSensitive?'selected':''}>No</option>
+            <option value="true"  ${t.caseSensitive?'selected':''}>Yes</option>
+          </select>
+        </div>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function addTrigger() {
+  const inp = document.getElementById('new-phrase');
+  const phrase = inp.value.trim();
+  if (!phrase) return;
+  const dur = +document.getElementById('g-duration').value;
+  const pat = document.getElementById('g-pattern').value;
+  const intensity = +document.getElementById('g-intensity').value;
+  triggers.push({ id: nextId++, phrase, duration: dur, pattern: pat, intensity, caseSensitive: false });
+  inp.value = '';
+  renderTriggers();
+  log(`Added trigger: "${phrase}"`);
+}
+
+function removeTrigger(id) {
+  triggers = triggers.filter(t => t.id !== id);
+  renderTriggers();
+}
+
+function updateTrigger(id, key, val) {
+  const t = triggers.find(t => t.id === id);
+  if (t) t[key] = val;
+}
+
+function testTrigger(id) {
+  const t = triggers.find(t => t.id === id);
+  if (t) fireTrigger(t);
+}
+
+// ─── Speech Recognition ───────────────────────────────────────────────────────
+function setupRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { log('Speech Recognition not supported in this browser. Use Chrome.','err'); return false; }
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-GB';
+
+  recognition.onstart = () => {
+    isListening = true;
+    updateMicUI(true);
+    log('Microphone active — listening…');
+  };
+  recognition.onend = () => {
+    if (isListening) recognition.start(); // auto-restart
+  };
+  recognition.onerror = e => {
+    if (e.error !== 'no-speech') log(`Speech error: ${e.error}`, 'err');
+  };
+  recognition.onresult = e => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const txt = e.results[i][0].transcript;
+      if (e.results[i].isFinal) { final += txt; }
+      else interim += txt;
+    }
+    const conf = e.results[e.results.length-1][0].confidence;
+    if (conf > 0) document.getElementById('conf-fill').style.width = (conf*100)+'%';
+
+    if (final) {
+      appendTranscript(final, true);
+      checkTriggers(final);
+    } else {
+      updateInterim(interim);
+      checkTriggers(interim);
+    }
+  };
+  return true;
+}
+
+let transcriptText = '';
+function appendTranscript(text, isFinal) {
+  transcriptText += text + ' ';
+  const box = document.getElementById('transcript');
+  let highlighted = transcriptText;
+  triggers.forEach(t => {
+    const escaped = t.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const flags = t.caseSensitive ? 'g' : 'gi';
+    highlighted = highlighted.replace(new RegExp(escaped, flags), m => `<mark>${m}</mark>`);
+  });
+  box.innerHTML = highlighted + '<span class="interim" id="interim-span"></span>';
+  box.scrollTop = box.scrollHeight;
+}
+
+function updateInterim(text) {
+  const sp = document.getElementById('interim-span');
+  if (sp) sp.textContent = text;
+}
+
+function toggleMic() {
+  if (isListening) {
+    isListening = false;
+    recognition && recognition.stop();
+    updateMicUI(false);
+    log('Mic stopped.');
+    // Stop Hume audio capture
+    stopHumeAudioCapture();
+  } else {
+    transcriptText = '';
+    document.getElementById('transcript').innerHTML = '';
+    if (!recognition && !setupRecognition()) return;
+    recognition.start();
+    // Start Hume audio capture if connected
+    if (isHumeConnected) startHumeAudioCapture();
+  }
+}
+
+function updateMicUI(on) {
+  const btn = document.getElementById('mic-btn');
+  const dot = document.getElementById('dot-mic');
+  const label = document.getElementById('label-mic');
+  btn.className = 'mic-btn' + (on ? ' listening' : '');
+  btn.textContent = on ? '🔴 Listening…  (click to stop)' : '🎤 Start Listening';
+  dot.className = 'dot' + (on ? ' green' : '');
+  label.textContent = on ? 'Mic active' : 'Mic off';
+}
+
+// ─── Trigger Matching ─────────────────────────────────────────────────────────
+const firedRecently = new Set();
+function checkTriggers(text) {
+  triggers.forEach(t => {
+    const haystack = t.caseSensitive ? text : text.toLowerCase();
+    const needle   = t.caseSensitive ? t.phrase : t.phrase.toLowerCase();
+    if (haystack.includes(needle)) {
+      if (!firedRecently.has(t.id)) {
+        fireTrigger(t);
+        firedRecently.add(t.id);
+        setTimeout(() => firedRecently.delete(t.id), 2000);
+      }
+    }
+  });
+}
+
+function fireTrigger(t) {
+  log(`⚡ Trigger: "${t.phrase}" → ${t.pattern} ${t.duration}ms @ ${t.intensity}`, 'fire');
+  const card = document.getElementById(`tcard-${t.id}`);
+  if (card) { card.classList.add('firing'); setTimeout(()=>card.classList.remove('firing'),400); }
+  const badge = document.getElementById('badge-fire');
+  badge.style.opacity = '1';
+  setTimeout(() => badge.style.opacity = '0', 1000);
+  sendCommand({ cmd: 'vibrate', phrase: t.phrase, duration: t.duration, pattern: t.pattern, intensity: t.intensity });
+}
+
+// ─── Communication ────────────────────────────────────────────────────────────
+function sendCommand(obj) {
+  const msg = JSON.stringify(obj);
+  if (currentTab === 'ws') {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(msg);
+      log(`WS → ${msg}`, 'ok');
+    } else {
+      log('WS not connected — command not sent', 'warn');
+    }
+  } else {
+    if (bleChar) {
+      const enc = new TextEncoder().encode(msg + '\n');
+      bleChar.writeValue(enc).then(()=> log(`BLE → ${msg}`,'ok')).catch(e=> log(`BLE send error: ${e}`,'err'));
+    } else {
+      log('BLE not connected — command not sent', 'warn');
+    }
+  }
+}
+
+function sendTest() {
+  sendCommand({ cmd: 'vibrate', phrase: 'test', duration: 300, pattern: 'double', intensity: 200 });
+}
+
+// WebSocket
+function wsConnect() {
+  const url = document.getElementById('ws-url').value.trim();
+  if (ws) ws.close();
+  log(`Connecting to ${url}…`, 'warn');
+  ws = new WebSocket(url);
+  ws.onopen  = () => { setConnUI(true, url); log(`WebSocket connected: ${url}`); };
+  ws.onclose = () => { setConnUI(false); log('WebSocket disconnected', 'warn'); };
+  ws.onerror = () => { log('WebSocket error — check ESP32 IP/port', 'err'); };
+  ws.onmessage = e => log(`ESP32 → ${e.data}`, 'ok');
+}
+function wsDisconnect() { ws && ws.close(); }
+
+// BLE (Nordic UART Service)
+const NUS_SERVICE  = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const NUS_TX_CHAR  = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+async function bleConnect() {
+  try {
+    log('Scanning for BLE devices…', 'warn');
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [NUS_SERVICE] }]
+    });
+    const server  = await device.gatt.connect();
+    const service = await server.getPrimaryService(NUS_SERVICE);
+    bleChar = await service.getCharacteristic(NUS_TX_CHAR);
+    device.addEventListener('gattserverdisconnected', () => { bleChar = null; setConnUI(false); log('BLE disconnected', 'warn'); });
+    setConnUI(true, device.name || 'ESP32');
+    log(`BLE connected: ${device.name}`);
+  } catch(e) { log(`BLE error: ${e.message}`, 'err'); }
+}
+function bleDisconnect() { bleChar && bleChar.service.device.gatt.disconnect(); }
+
+function setConnUI(connected, label='') {
+  document.getElementById('dot-conn').className  = 'dot' + (connected ? ' green' : '');
+  document.getElementById('label-conn').textContent = connected ? label : 'Disconnected';
+}
+
+// ─── Tab Switching ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-ws').className  = 'tab' + (tab==='ws'  ? ' active' : '');
+  document.getElementById('tab-ble').className = 'tab' + (tab==='ble' ? ' active' : '');
+  document.getElementById('pane-ws').style.display  = tab==='ws'  ? 'block' : 'none';
+  document.getElementById('pane-ble').style.display = tab==='ble' ? 'block' : 'none';
+}
+
+// ─── Hume AI Integration ──────────────────────────────────────────────────────
+function humeConnect() {
+  const key = document.getElementById('hume-key').value.trim();
+  if (!key) { log('Enter a Hume API key first', 'warn'); return; }
+  if (humeWs) humeDisconnect();
+
+  const url = `wss://api.hume.ai/v0/stream/models?apikey=${key}`;
+  log('Connecting to Hume AI…', 'warn');
+
+  humeWs = new WebSocket(url);
+
+  humeWs.onopen = () => {
+    isHumeConnected = true;
+    setHumeUI(true);
+    log('Hume AI connected — voice prosody active', 'ok');
+    // If mic is already listening, start capturing audio for Hume
+    if (isListening) startHumeAudioCapture();
+  };
+
+  humeWs.onclose = () => {
+    isHumeConnected = false;
+    setHumeUI(false);
+    stopHumeAudioCapture();
+    log('Hume AI disconnected', 'warn');
+  };
+
+  humeWs.onerror = (e) => {
+    log('Hume AI connection error — check API key', 'err');
+  };
+
+  humeWs.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      handleHumeResponse(data);
+    } catch(err) {
+      // ignore parse errors
+    }
+  };
+}
+
+function humeDisconnect() {
+  stopHumeAudioCapture();
+  if (humeWs) { humeWs.close(); humeWs = null; }
+  isHumeConnected = false;
+  setHumeUI(false);
+}
+
+function setHumeUI(connected) {
+  document.getElementById('dot-hume').className = 'dot' + (connected ? ' green' : '');
+  document.getElementById('label-hume').textContent = connected ? 'Hume active' : 'Hume off';
+  document.getElementById('dot-hume-inner').className = 'dot' + (connected ? ' green' : '');
+  document.getElementById('hume-status-text').textContent = connected
+    ? 'Connected — streaming voice prosody analysis'
+    : 'Not connected — get a free key at app.hume.ai';
+}
+
+// ─── Hume Audio Capture ───────────────────────────────────────────────────────
+async function startHumeAudioCapture() {
+  if (humeMediaRecorder) return; // already capturing
+  try {
+    humeStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    // Use a supported MIME type
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : 'audio/webm';
+
+    humeMediaRecorder = new MediaRecorder(humeStream, { mimeType });
+    audioChunks = [];
+
+    humeMediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        audioChunks.push(e.data);
+      }
+    };
+
+    // Every 2 seconds, collect audio and send to Hume
+    humeMediaRecorder.start();
+
+    humeSendInterval = setInterval(() => {
+      if (humeMediaRecorder && humeMediaRecorder.state === 'recording') {
+        humeMediaRecorder.stop();
+        humeMediaRecorder.start();
+      }
+    }, 2500);
+
+    humeMediaRecorder.onstop = async () => {
+      if (audioChunks.length === 0) return;
+      const blob = new Blob(audioChunks, { type: mimeType });
+      audioChunks = [];
+
+      if (!humeWs || humeWs.readyState !== WebSocket.OPEN) return;
+
+      const arrayBuffer = await blob.arrayBuffer();
+      const base64 = arrayBufferToBase64(arrayBuffer);
+
+      const message = JSON.stringify({
+        models: { prosody: {} },
+        data: base64,
+        raw_text: false
+      });
+
+      try {
+        humeWs.send(message);
+      } catch(err) {
+        // connection may have closed
+      }
+    };
+
+    log('Hume audio capture started', 'ok');
+  } catch(err) {
+    log(`Mic access error for Hume: ${err.message}`, 'err');
+  }
+}
+
+function stopHumeAudioCapture() {
+  if (humeSendInterval) { clearInterval(humeSendInterval); humeSendInterval = null; }
+  if (humeMediaRecorder && humeMediaRecorder.state !== 'inactive') {
+    try { humeMediaRecorder.stop(); } catch(e) {}
+  }
+  humeMediaRecorder = null;
+  if (humeStream) {
+    humeStream.getTracks().forEach(t => t.stop());
+    humeStream = null;
+  }
+  audioChunks = [];
+}
+
+function arrayBufferToBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+// ─── Handle Hume Prosody Response ─────────────────────────────────────────────
+function handleHumeResponse(data) {
+  // Navigate the response structure to find prosody predictions
+  let emotions = null;
+
+  try {
+    if (data.prosody && data.prosody.predictions) {
+      const preds = data.prosody.predictions;
+      if (preds.length > 0 && preds[0].models && preds[0].models.prosody) {
+        const grouped = preds[0].models.prosody.grouped_predictions;
+        if (grouped && grouped.length > 0) {
+          const last = grouped[grouped.length - 1];
+          if (last.predictions && last.predictions.length > 0) {
+            emotions = last.predictions[last.predictions.length - 1].emotions;
+          }
+        }
+      }
+    }
+  } catch(e) {}
+
+  // Try alternate response structure
+  if (!emotions) {
+    try {
+      const results = data.prosody?.predictions
+        || data.results?.predictions
+        || null;
+
+      if (results) {
+        for (const pred of results) {
+          const em = pred.emotions || pred.models?.prosody?.grouped_predictions?.[0]?.predictions?.[0]?.emotions;
+          if (em) { emotions = em; break; }
+        }
+      }
+    } catch(e) {}
+  }
+
+  // Deepest fallback: walk the entire object looking for an emotions array
+  if (!emotions) {
+    emotions = findEmotions(data);
+  }
+
+  if (emotions && emotions.length > 0) {
+    updateEmotionBox(emotions);
+  }
+}
+
+function findEmotions(obj) {
+  if (!obj || typeof obj !== 'object') return null;
+  if (Array.isArray(obj)) {
+    // Check if this looks like an emotions array
+    if (obj.length > 10 && obj[0] && obj[0].name && obj[0].score !== undefined) {
+      return obj;
+    }
+    for (const item of obj) {
+      const found = findEmotions(item);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (obj.emotions && Array.isArray(obj.emotions)) return obj.emotions;
+  for (const key of Object.keys(obj)) {
+    const found = findEmotions(obj[key]);
+    if (found) return found;
+  }
+  return null;
+}
+
+// ─── Blob Rendering ───────────────────────────────────────────────────────────
+let blobAnimFrame = null;
+let blobPhase = 0;
+let blobRgbCurrent = [108,142,247];
+let blobRgbTarget  = [108,142,247];
+let blobLerpT = 1;
+
+function hexToRgb(hex) {
+  const h = hex.replace('#','');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+
+function lerpRgb(a, b, t) {
+  return [Math.round(a[0]+(b[0]-a[0])*t), Math.round(a[1]+(b[1]-a[1])*t), Math.round(a[2]+(b[2]-a[2])*t)];
+}
+
+function blobPath(cx, cy, baseR, phase, seed) {
+  const pts = 8, points = [];
+  for (let i = 0; i < pts; i++) {
+    const angle = (i/pts)*Math.PI*2;
+    const wobble = 0.18*Math.sin(phase*1.3+seed+i*1.9) + 0.10*Math.cos(phase*0.7+seed*0.5+i*2.7);
+    const r = baseR*(1+wobble);
+    points.push([cx+Math.cos(angle)*r, cy+Math.sin(angle)*r]);
+  }
+  let d=''; const n=points.length;
+  for (let i=0;i<n;i++) {
+    const p0=points[(i-1+n)%n],p1=points[i],p2=points[(i+1)%n],p3=points[(i+2)%n];
+    if (i===0) d+=`M${p1[0].toFixed(1)},${p1[1].toFixed(1)} `;
+    const cp1x=p1[0]+(p2[0]-p0[0])/6,cp1y=p1[1]+(p2[1]-p0[1])/6;
+    const cp2x=p2[0]-(p3[0]-p1[0])/6,cp2y=p2[1]-(p3[1]-p1[1])/6;
+    d+=`C${cp1x.toFixed(1)},${cp1y.toFixed(1)},${cp2x.toFixed(1)},${cp2y.toFixed(1)},${p2[0].toFixed(1)},${p2[1].toFixed(1)} `;
+  }
+  return d+'Z';
+}
+
+const NUM_RINGS = 9;
+const VW = 400, VH = 260;
+
+function renderBlob(rgb, phase) {
+  const rings = document.getElementById('blob-rings');
+  if (!rings) return;
+  const cx = VW*0.5 + Math.sin(phase*0.4)*12;
+  const cy = VH*0.5 + Math.cos(phase*0.31)*8;
+  const maxR = Math.min(VW,VH)*0.44;
+  const [r,g,b] = rgb;
+  let html = '';
+  for (let i=NUM_RINGS; i>=1; i--) {
+    const frac   = i/NUM_RINGS;
+    const radius = maxR*frac;
+    const alpha  = 0.05 + (1-frac)*0.75;
+    const seed   = i*4.1;
+    const path   = blobPath(cx, cy, radius, phase, seed);
+    const filter = i>=NUM_RINGS-1 ? ' filter="url(#blob-blur)"' : '';
+    html += `<path d="${path}" fill="rgba(${r},${g},${b},${alpha.toFixed(2)})"${filter}/>`;
+  }
+  rings.innerHTML = html;
+}
+
+function startBlobAnimation() {
+  if (blobAnimFrame) cancelAnimationFrame(blobAnimFrame);
+  function loop() {
+    blobAnimFrame = requestAnimationFrame(loop);
+    blobPhase += 0.012;
+    blobLerpT = Math.min(blobLerpT+0.035, 1);
+    const rgb = lerpRgb(blobRgbCurrent, blobRgbTarget, blobLerpT);
+    renderBlob(rgb, blobPhase);
+  }
+  loop();
+}
+
+// ─── Update Emotion Box ───────────────────────────────────────────────────────
+let currentEmotion = null;
+
+function updateEmotionBox(emotions) {
+  const sorted = [...emotions].sort((a,b)=>b.score-a.score);
+  const top = sorted[0], top5 = sorted.slice(0,5);
+  if (!top) return;
+  currentEmotion = top.name;
+  const color = getEmotionColor(top.name);
+
+  // Kick off colour transition
+  blobRgbCurrent = lerpRgb(blobRgbCurrent, blobRgbTarget, blobLerpT);
+  blobRgbTarget  = hexToRgb(color.bg);
+  blobLerpT = 0;
+
+  document.getElementById('emo-label').textContent = top.name;
+  document.getElementById('emo-score').textContent = `${(top.score*100).toFixed(1)}%`;
+
+  // Mini blobs for top 5
+  const barsEl = document.getElementById('emo-bars');
+  barsEl.innerHTML = '';
+  top5.forEach(em => {
+    const c = getEmotionColor(em.name);
+    const pct = Math.round(em.score*100);
+    const [r,g,b] = hexToRgb(c.bg);
+    barsEl.innerHTML += `
+      <div class="emotion-bar-item">
+        <div class="mini-blob-wrap">
+          <svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="18" cy="18" r="17" fill="rgba(${r},${g},${b},0.12)"/>
+            <circle cx="18" cy="18" r="12" fill="rgba(${r},${g},${b},0.32)"/>
+            <circle cx="18" cy="18" r="7"  fill="rgba(${r},${g},${b},0.80)"/>
+          </svg>
+        </div>
+        <div class="bar-label">${em.name.replace(/\(.*\)/,'').trim()}</div>
+        <div class="bar-score">${pct}%</div>
+      </div>`;
+  });
+
+  log(`🎭 ${top.name} ${(top.score*100).toFixed(0)}% | ${top5.slice(1).map(e=>e.name).join(', ')}`, 'emo');
+}
+
+// ─── Emotion Box Fullscreen Toggle ────────────────────────────────────────────
+let isEmotionFullscreen = false;
+
+function toggleEmotionFullscreen() {
+  const box = document.getElementById('emotion-box');
+  isEmotionFullscreen = !isEmotionFullscreen;
+  if (isEmotionFullscreen) {
+    box.classList.add('fullscreen');
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'fs-close';
+    closeBtn.innerHTML = '✕';
+    closeBtn.onclick = (e) => { e.stopPropagation(); toggleEmotionFullscreen(); };
+    box.appendChild(closeBtn);
+    box.querySelector('.emotion-hint').textContent = 'click anywhere or ✕ to exit • ESC also works';
+  } else {
+    box.classList.remove('fullscreen');
+    const closeBtn = box.querySelector('.fs-close');
+    if (closeBtn) closeBtn.remove();
+    box.querySelector('.emotion-hint').textContent = 'click to fullscreen';
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key==='Escape' && isEmotionFullscreen) toggleEmotionFullscreen();
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderTriggers();
+log('Ready. Add trigger phrases, connect to ESP32, then start the mic.', 'ok');
+log('For emotion detection: paste your Hume API key and click Connect.', 'ok');
+startBlobAnimation();
+</script>
+</body>
+</html>
