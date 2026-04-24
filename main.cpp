@@ -216,5 +216,18 @@ void setup() {
 
 // ── Loop ──────────────────────────────────────────────────────────────────────
 void loop() {
+
+  // ── USB Serial input (same JSON as BLE) ──────────────────
+  while (Serial.available()) {
+    char c = Serial.read();
+    if (c == '\n') {
+      serialInputBuffer.trim();
+      if (serialInputBuffer.length()) handleCommand(serialInputBuffer);
+      serialInputBuffer = "";
+    } else {
+      serialInputBuffer += c;
+    }
+  }
+
   vTaskDelay(pdMS_TO_TICKS(100));
 }
