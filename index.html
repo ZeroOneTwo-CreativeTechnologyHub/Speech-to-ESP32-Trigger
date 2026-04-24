@@ -160,7 +160,8 @@
       <h2>ESP32 Connection</h2>
       <div class="tabs">
         <div class="tab active" id="tab-ws" onclick="switchTab('ws')">WebSocket</div>
-        <div class="tab" id="tab-ble" onclick="switchTab('ble')">Bluetooth (BLE)</div>
+        <div class="tab" id="tab-ble" onclick="switchTab('ble')">Bluetooth</div>
+        <div class="tab" id="tab-usb" onclick="switchTab('usb')">USB Serial</div>
       </div>
       <div id="pane-ws">
         <div class="field">
@@ -181,6 +182,27 @@
           <button class="btn ghost" onclick="bleDisconnect()">Disconnect</button>
           <button class="btn ghost sm" onclick="sendTest()">Test</button>
         </div>
+      </div>
+      <div id="pane-usb" style="display:none">
+        <div class="field">
+          <label>Baud Rate</label>
+          <select id="usb-baud">
+            <option value="9600">9600</option>
+            <option value="19200">19200</option>
+            <option value="38400">38400</option>
+            <option value="57600">57600</option>
+            <option value="115200" selected>115200</option>
+            <option value="230400">230400</option>
+            <option value="460800">460800</option>
+            <option value="921600">921600</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" onclick="usbConnect()">Select Port & Connect</button>
+          <button class="btn ghost" onclick="usbDisconnect()">Disconnect</button>
+          <button class="btn ghost sm" onclick="sendTest()">Test</button>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;">Uses the Web Serial API (Chrome/Edge). Plug ESP32 in via USB, click Connect, and select the port. ESP32 reads JSON on <code>Serial</code> at the chosen baud rate.</p>
       </div>
     </div>
 
@@ -308,18 +330,28 @@ function getEmotionColor(n){ return EMOTION_COLORS[n] || {bg:"#6c8ef7",text:"#ff
 // ═══════════════════════════════════════════════════════════════════
 let recognition = null, isListening = false;
 let ws = null, bleChar = null, currentTab = 'ws';
+let serialPort = null, serialWriter = null, serialReader = null;
 let triggers = [
-  {id:1, phrase:'stop',       duration:500, pattern:'double',  intensity:255},
-  {id:2, phrase:'watch out',  duration:800, pattern:'triple',  intensity:255},
-  {id:3, phrase:'look at me', duration:300, pattern:'single',  intensity:200},
+  {id:1, phrase:'who',   duration:500, pattern:'single', intensity:255},
+  {id:2, phrase:'what',  duration:500, pattern:'single', intensity:255},
+  {id:3, phrase:'where', duration:500, pattern:'single', intensity:255},
+  {id:4, phrase:'when',  duration:500, pattern:'single', intensity:255},
+  {id:5, phrase:'why',   duration:500, pattern:'single', intensity:255},
+  {id:6, phrase:'how',   duration:500, pattern:'single', intensity:255},
+  {id:7, phrase:'which', duration:500, pattern:'single', intensity:255},
 ];
-let nextId = 4;
+let nextId = 8;
 
 // Hume
 let humeWs = null;
 let isHumeConnected = false;
 let humeRecorder = null;
 let humeSendTimer = null;
+let humeApiKey = '';          // stored so reconnect can use it
+let humeWantConnected = false; // true = user clicked Connect, false = user clicked Disconnect
+let humeReconnectTimer = null;
+let humeReconnectDelay = 1000; // starts at 1s, backs off to 8s max
+let humeReconnectCount = 0;
 
 // ═══════════════════════════════════════════════════════════════════
 //  LOGGING
@@ -425,7 +457,7 @@ function toggleMic(){
     document.getElementById('transcript').innerHTML='';
     if(!recognition&&!setupRecognition()) return;
     recognition.start();
-    if(isHumeConnected) startHumeCapture();
+    if(humeWantConnected) startHumeCapture();
   }
 }
 function updateMicUI(on){
@@ -464,10 +496,15 @@ function sendCommand(obj){
   if(currentTab==='ws'){
     if(ws&&ws.readyState===WebSocket.OPEN){ws.send(msg);log(`WS → ${msg}`);}
     else log('WS not connected — command not sent','warn');
-  }else{
+  }else if(currentTab==='ble'){
     if(bleChar){const enc=new TextEncoder().encode(msg+'\n');
       bleChar.writeValue(enc).then(()=>log(`BLE → ${msg}`)).catch(e=>log(`BLE send error: ${e}`,'err'));
     }else log('BLE not connected — command not sent','warn');
+  }else if(currentTab==='usb'){
+    if(serialWriter){
+      const enc=new TextEncoder().encode(msg+'\n');
+      serialWriter.write(enc).then(()=>log(`USB → ${msg}`)).catch(e=>log(`USB send error: ${e}`,'err'));
+    }else log('USB not connected — command not sent','warn');
   }
 }
 function sendTest(){sendCommand({cmd:'vibrate',phrase:'test',duration:300,pattern:'double',intensity:200});}
@@ -496,6 +533,65 @@ async function bleConnect(){
 }
 function bleDisconnect(){bleChar&&bleChar.service.device.gatt.disconnect();}
 
+// ─── USB Serial (Web Serial API) ──────────────────────────────────
+async function usbConnect(){
+  if(!('serial' in navigator)){log('Web Serial API not supported — use Chrome or Edge.','err');return;}
+  try{
+    // Prompt user to select a serial port
+    serialPort = await navigator.serial.requestPort();
+    const baud = +document.getElementById('usb-baud').value;
+    await serialPort.open({ baudRate: baud });
+
+    // Set up writer
+    serialWriter = serialPort.writable.getWriter();
+
+    // Set up reader (background loop for incoming data)
+    startSerialReader();
+
+    setConnUI(true, `USB @ ${baud}`);
+    log(`USB Serial connected @ ${baud} baud`);
+  }catch(e){
+    if(e.name==='NotFoundError') log('No port selected.','warn');
+    else log(`USB error: ${e.message}`,'err');
+  }
+}
+
+async function usbDisconnect(){
+  try{
+    if(serialReader){serialReader.cancel(); serialReader=null;}
+    if(serialWriter){serialWriter.releaseLock(); serialWriter=null;}
+    if(serialPort){await serialPort.close(); serialPort=null;}
+    setConnUI(false);
+    log('USB Serial disconnected.');
+  }catch(e){log(`USB disconnect error: ${e.message}`,'err');}
+}
+
+async function startSerialReader(){
+  if(!serialPort||!serialPort.readable) return;
+  const decoder=new TextDecoderStream();
+  const readableStreamClosed=serialPort.readable.pipeTo(decoder.writable);
+  serialReader=decoder.readable.getReader();
+  let buffer='';
+  try{
+    while(true){
+      const {value,done}=await serialReader.read();
+      if(done) break;
+      if(value){
+        buffer+=value;
+        // Process complete lines
+        let nl;
+        while((nl=buffer.indexOf('\n'))!==-1){
+          const line=buffer.slice(0,nl).trim();
+          buffer=buffer.slice(nl+1);
+          if(line) log(`ESP32 → ${line}`,'ok');
+        }
+      }
+    }
+  }catch(e){
+    if(e.name!=='CancelError') log(`USB read error: ${e.message}`,'err');
+  }
+}
+
 function setConnUI(c,l=''){
   document.getElementById('dot-conn').className='dot'+(c?' green':'');
   document.getElementById('label-conn').textContent=c?l:'Disconnected';
@@ -504,8 +600,10 @@ function switchTab(tab){
   currentTab=tab;
   document.getElementById('tab-ws').className='tab'+(tab==='ws'?' active':'');
   document.getElementById('tab-ble').className='tab'+(tab==='ble'?' active':'');
+  document.getElementById('tab-usb').className='tab'+(tab==='usb'?' active':'');
   document.getElementById('pane-ws').style.display=tab==='ws'?'block':'none';
   document.getElementById('pane-ble').style.display=tab==='ble'?'block':'none';
+  document.getElementById('pane-usb').style.display=tab==='usb'?'block':'none';
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -514,32 +612,92 @@ function switchTab(tab){
 function humeConnect(){
   const key=document.getElementById('hume-key').value.trim();
   if(!key){log('Enter a Hume API key first','warn');return;}
-  if(humeWs) humeDisconnect();
 
-  log('Connecting to Hume AI…','warn');
-  humeWs=new WebSocket(`wss://api.hume.ai/v0/stream/models?apikey=${key}`);
+  humeApiKey = key;
+  humeWantConnected = true;
+  humeReconnectCount = 0;
+  humeReconnectDelay = 1000;
+  if(humeReconnectTimer){clearTimeout(humeReconnectTimer);humeReconnectTimer=null;}
+
+  humeOpenSocket();
+}
+
+function humeOpenSocket(){
+  // Close existing socket if any (without triggering full disconnect)
+  if(humeWs){try{humeWs.onclose=null;humeWs.close();}catch(e){} humeWs=null;}
+
+  if(!humeApiKey||!humeWantConnected) return;
+  setHumeUI('connecting');
+  log(humeReconnectCount>0?`Hume reconnecting (#${humeReconnectCount})…`:'Connecting to Hume AI…','warn');
+
+  humeWs=new WebSocket(`wss://api.hume.ai/v0/stream/models?apikey=${humeApiKey}`);
 
   humeWs.onopen=()=>{
-    isHumeConnected=true; setHumeUI(true);
+    isHumeConnected=true;
+    humeReconnectCount=0;
+    humeReconnectDelay=1000; // reset backoff on success
+    setHumeUI('connected');
     log('Hume AI connected — voice prosody active');
+    // Start capture if mic is running and capture isn't already going
     if(isListening) startHumeCapture();
   };
-  humeWs.onclose=()=>{ isHumeConnected=false; setHumeUI(false); stopHumeCapture(); log('Hume AI disconnected','warn'); };
-  humeWs.onerror=()=>{ log('Hume AI error — check API key','err'); };
+
+  humeWs.onclose=(e)=>{
+    isHumeConnected=false;
+    if(humeWantConnected){
+      // Auto-reconnect — don't stop the audio capture, just reconnect the socket
+      humeReconnectCount++;
+      setHumeUI('reconnecting');
+      log(`Hume disconnected (code ${e.code}) — reconnecting in ${humeReconnectDelay/1000}s…`,'warn');
+      humeReconnectTimer=setTimeout(()=>{
+        humeOpenSocket();
+      }, humeReconnectDelay);
+      // Exponential backoff: 1s → 2s → 4s → 8s (cap)
+      humeReconnectDelay=Math.min(humeReconnectDelay*2, 8000);
+    }else{
+      setHumeUI('off');
+    }
+  };
+
+  humeWs.onerror=()=>{
+    // onerror is always followed by onclose, so reconnect logic lives there.
+    // Only log if this is a first-attempt failure (likely bad API key)
+    if(humeReconnectCount===0) log('Hume AI error — check API key','err');
+  };
+
   humeWs.onmessage=e=>{ try{handleHumeResponse(JSON.parse(e.data));}catch(err){} };
 }
+
 function humeDisconnect(){
+  humeWantConnected=false;
+  humeApiKey='';
+  if(humeReconnectTimer){clearTimeout(humeReconnectTimer);humeReconnectTimer=null;}
   stopHumeCapture();
-  if(humeWs){humeWs.close();humeWs=null;}
-  isHumeConnected=false; setHumeUI(false);
+  if(humeWs){try{humeWs.onclose=null;humeWs.close();}catch(e){} humeWs=null;}
+  isHumeConnected=false;
+  setHumeUI('off');
+  log('Hume AI disconnected (manual).');
 }
-function setHumeUI(on){
-  document.getElementById('dot-hume').className='dot'+(on?' green':'');
-  document.getElementById('label-hume').textContent=on?'Hume active':'Hume off';
-  document.getElementById('dot-hume-inner').className='dot'+(on?' green':'');
-  document.getElementById('hume-status-text').textContent=on
-    ?'Connected — streaming voice prosody analysis'
-    :'Not connected — get a free key at app.hume.ai';
+
+function setHumeUI(state){
+  const dotH=document.getElementById('dot-hume');
+  const lblH=document.getElementById('label-hume');
+  const dotI=document.getElementById('dot-hume-inner');
+  const txtI=document.getElementById('hume-status-text');
+
+  if(state==='connected'){
+    dotH.className='dot green'; lblH.textContent='Hume active';
+    dotI.className='dot green';  txtI.textContent='Connected — streaming voice prosody analysis';
+  }else if(state==='connecting'){
+    dotH.className='dot amber'; lblH.textContent='Connecting…';
+    dotI.className='dot amber';  txtI.textContent='Connecting to Hume AI…';
+  }else if(state==='reconnecting'){
+    dotH.className='dot amber'; lblH.textContent=`Reconnecting (#${humeReconnectCount})`;
+    dotI.className='dot amber';  txtI.textContent=`Connection dropped — auto-reconnecting (#${humeReconnectCount})…`;
+  }else{
+    dotH.className='dot'; lblH.textContent='Hume off';
+    dotI.className='dot'; txtI.textContent='Not connected — get a free key at app.hume.ai';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
