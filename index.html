@@ -665,7 +665,23 @@ function humeOpenSocket(){
     if(humeReconnectCount===0) log('Hume AI error — check API key','err');
   };
 
-  humeWs.onmessage=e=>{ try{handleHumeResponse(JSON.parse(e.data));}catch(err){} };
+  humeWs.onmessage=e=>{
+    try{
+      const data = JSON.parse(e.data);
+      // Check for errors in Hume response
+      if(data.error) {
+        log(`Hume error: ${data.error}`, 'err');
+        return;
+      }
+      if(data.code && data.message) {
+        log(`Hume API: ${data.code} — ${data.message}`, 'err');
+        return;
+      }
+      handleHumeResponse(data);
+    }catch(err){
+      log(`Hume response parse error: ${err.message}`, 'err');
+    }
+  };
 }
 
 function humeDisconnect(){
@@ -718,15 +734,23 @@ async function startHumeCapture(){
 
     humeRecorder = new MediaRecorder(stream, { mimeType: mime });
 
+    let chunkCount = 0;
+
     // Use timeslice mode — ondataavailable fires every N ms
     // WITHOUT stopping/restarting the recorder (no audio glitches)
     humeRecorder.ondataavailable = async (e) => {
-      if(e.data.size < 100) return; // skip tiny/empty chunks
-      if(!humeWs || humeWs.readyState !== WebSocket.OPEN) return;
+      if(e.data.size < 100) { return; }
+
+      chunkCount++;
+
+      if(!humeWs || humeWs.readyState !== WebSocket.OPEN) {
+        log(`Hume chunk #${chunkCount} skipped — socket not open (state: ${humeWs ? humeWs.readyState : 'null'})`, 'warn');
+        return;
+      }
 
       // Async base64 via FileReader — does NOT block the main thread
       const base64 = await blobToBase64Async(e.data);
-      if(!base64) return;
+      if(!base64) { log('Hume chunk base64 encode failed', 'err'); return; }
 
       try{
         humeWs.send(JSON.stringify({
@@ -734,7 +758,10 @@ async function startHumeCapture(){
           data: base64,
           raw_text: false
         }));
-      }catch(err){}
+        log(`Hume ← sent chunk #${chunkCount} (${(e.data.size/1024).toFixed(0)} KB)`);
+      }catch(err){
+        log(`Hume send failed: ${err.message}`, 'err');
+      }
     };
 
     // Start with timeslice: fires ondataavailable every 4000ms automatically
@@ -786,10 +813,16 @@ function handleHumeResponse(data){
   try {
     const emotions = findEmotions(data);
     if(emotions && emotions.length > 0) {
+      log(`Hume → ${emotions.length} emotions received`);
       updateEmotionBox(emotions);
+    } else {
+      // Log the top-level keys so we can see the response structure
+      const keys = Object.keys(data || {}).join(', ');
+      log(`Hume → no emotions found (keys: ${keys})`, 'warn');
     }
   } catch(err) {
     console.error('Hume parse error:', err);
+    log(`Hume parse error: ${err.message}`, 'err');
   }
 }
 
