@@ -78,7 +78,7 @@
   .emotion-box-wrapper { position: relative; }
   #emotion-box {
     width: 100%; height: 280px; border-radius: 10px;
-    background: #e8e6e2;
+    background: #f5f5f3;
     transition: background-color 1.2s ease;
     display: flex; flex-direction: column;
     align-items: center; justify-content: flex-end;
@@ -356,32 +356,32 @@
 //  EMOTION → COLOUR MAP (48 Hume prosody emotions)
 // ═══════════════════════════════════════════════════════════════════
 const EMOTION_COLORS = {
-  "Admiration":       {bg:"#FFD700",text:"#1a1200"}, "Adoration":        {bg:"#FF69B4",text:"#2a0018"},
-  "Aesthetic Appreciation":{bg:"#E6C8FF",text:"#1f0033"}, "Amusement":   {bg:"#FFE135",text:"#2a2200"},
-  "Anger":            {bg:"#DC2626",text:"#fff"},     "Annoyance":        {bg:"#EF6C00",text:"#1a0e00"},
-  "Anxiety":          {bg:"#7B1FA2",text:"#fff"},     "Awe":              {bg:"#1565C0",text:"#fff"},
-  "Awkwardness":      {bg:"#BCAAA4",text:"#1a1210"}, "Boredom":          {bg:"#607D8B",text:"#fff"},
-  "Calmness":         {bg:"#80CBC4",text:"#0a1e1c"}, "Concentration":    {bg:"#283593",text:"#fff"},
-  "Confusion":        {bg:"#CE93D8",text:"#1a0020"}, "Contemplation":    {bg:"#37474F",text:"#B0BEC5"},
-  "Contempt":         {bg:"#4A0E0E",text:"#f87171"}, "Contentment":      {bg:"#81C784",text:"#0a1f0b"},
-  "Craving":          {bg:"#FF8F00",text:"#1a1000"}, "Desire":           {bg:"#D32F2F",text:"#fff"},
-  "Determination":    {bg:"#F57F17",text:"#1a1400"}, "Disappointment":   {bg:"#546E7A",text:"#CFD8DC"},
-  "Disapproval":      {bg:"#880E4F",text:"#fff"},     "Disgust":         {bg:"#33691E",text:"#C5E1A5"},
-  "Distress":         {bg:"#B71C1C",text:"#fff"},     "Doubt":           {bg:"#78909C",text:"#fff"},
-  "Ecstasy":          {bg:"#FF1744",text:"#fff"},     "Embarrassment":   {bg:"#F48FB1",text:"#2a0015"},
-  "Empathic Pain":    {bg:"#6A1B9A",text:"#fff"},     "Enthusiasm":      {bg:"#FF6D00",text:"#fff"},
-  "Entrancement":     {bg:"#0D47A1",text:"#82B1FF"}, "Envy":            {bg:"#2E7D32",text:"#fff"},
-  "Excitement":       {bg:"#FF3D00",text:"#fff"},     "Fear":            {bg:"#1A0033",text:"#CE93D8"},
-  "Gratitude":        {bg:"#FFF176",text:"#2a2400"}, "Guilt":           {bg:"#4E342E",text:"#BCAAA4"},
-  "Horror":           {bg:"#0D0D0D",text:"#f87171"}, "Interest":        {bg:"#0097A7",text:"#fff"},
-  "Joy":              {bg:"#FFEB3B",text:"#1a1800"}, "Love":            {bg:"#E91E63",text:"#fff"},
-  "Nostalgia":        {bg:"#A1887F",text:"#fff"},     "Pain":            {bg:"#6D0000",text:"#ffcdd2"},
-  "Pride":            {bg:"#6A1B9A",text:"#E1BEE7"}, "Realization":     {bg:"#00BCD4",text:"#00272e"},
-  "Relief":           {bg:"#A5D6A7",text:"#0a1f0b"}, "Romance":         {bg:"#C2185B",text:"#fff"},
-  "Sadness":          {bg:"#1A237E",text:"#9FA8DA"}, "Sarcasm":         {bg:"#F9A825",text:"#1a1400"},
-  "Satisfaction":     {bg:"#66BB6A",text:"#0a1f0b"}, "Shame":           {bg:"#3E2723",text:"#D7CCC8"},
-  "Surprise (negative)":{bg:"#FF6F00",text:"#fff"},  "Surprise (positive)":{bg:"#00E5FF",text:"#001a1f"},
-  "Sympathy":         {bg:"#7986CB",text:"#fff"},     "Tiredness":       {bg:"#455A64",text:"#B0BEC5"},
+  "Admiration":       {bg:"#FFD000",text:"#1a1200"}, "Adoration":        {bg:"#FF5CAD",text:"#fff"},
+  "Aesthetic Appreciation":{bg:"#C88FFF",text:"#1f0033"}, "Amusement":   {bg:"#FFD600",text:"#2a2200"},
+  "Anger":            {bg:"#EF2020",text:"#fff"},     "Annoyance":        {bg:"#FF7A1A",text:"#fff"},
+  "Anxiety":          {bg:"#A040D4",text:"#fff"},     "Awe":              {bg:"#2979FF",text:"#fff"},
+  "Awkwardness":      {bg:"#D4A88C",text:"#1a1210"}, "Boredom":          {bg:"#90A4AE",text:"#fff"},
+  "Calmness":         {bg:"#4DD0C4",text:"#0a1e1c"}, "Concentration":    {bg:"#4054D6",text:"#fff"},
+  "Confusion":        {bg:"#CE70E0",text:"#fff"},     "Contemplation":    {bg:"#7090A0",text:"#fff"},
+  "Contempt":         {bg:"#C44040",text:"#fff"},     "Contentment":      {bg:"#4CAF50",text:"#fff"},
+  "Craving":          {bg:"#FFA020",text:"#fff"},     "Desire":           {bg:"#E83C3C",text:"#fff"},
+  "Determination":    {bg:"#F9A825",text:"#1a1400"}, "Disappointment":   {bg:"#8098A8",text:"#fff"},
+  "Disapproval":      {bg:"#D81B60",text:"#fff"},     "Disgust":         {bg:"#6DA030",text:"#fff"},
+  "Distress":         {bg:"#E53935",text:"#fff"},     "Doubt":           {bg:"#90A4B0",text:"#fff"},
+  "Ecstasy":          {bg:"#FF2060",text:"#fff"},     "Embarrassment":   {bg:"#FF80AB",text:"#2a0015"},
+  "Empathic Pain":    {bg:"#9040CC",text:"#fff"},     "Enthusiasm":      {bg:"#FF8500",text:"#fff"},
+  "Entrancement":     {bg:"#2962FF",text:"#fff"},     "Envy":            {bg:"#43A047",text:"#fff"},
+  "Excitement":       {bg:"#FF5722",text:"#fff"},     "Fear":            {bg:"#7B1FA2",text:"#fff"},
+  "Gratitude":        {bg:"#FFE94A",text:"#2a2400"}, "Guilt":           {bg:"#A07060",text:"#fff"},
+  "Horror":           {bg:"#880044",text:"#fff"},     "Interest":        {bg:"#00BCD4",text:"#fff"},
+  "Joy":              {bg:"#FFEA00",text:"#1a1800"}, "Love":            {bg:"#F50057",text:"#fff"},
+  "Nostalgia":        {bg:"#C09878",text:"#fff"},     "Pain":            {bg:"#D32F2F",text:"#fff"},
+  "Pride":            {bg:"#9C27B0",text:"#fff"},     "Realization":     {bg:"#00E5FF",text:"#00272e"},
+  "Relief":           {bg:"#66DD6A",text:"#0a1f0b"}, "Romance":         {bg:"#EC407A",text:"#fff"},
+  "Sadness":          {bg:"#4060D0",text:"#fff"},     "Sarcasm":         {bg:"#FFB300",text:"#1a1400"},
+  "Satisfaction":     {bg:"#5CD65C",text:"#0a1f0b"}, "Shame":           {bg:"#B07060",text:"#fff"},
+  "Surprise (negative)":{bg:"#FF8F00",text:"#fff"},  "Surprise (positive)":{bg:"#00E5FF",text:"#001a1f"},
+  "Sympathy":         {bg:"#7C8FE0",text:"#fff"},     "Tiredness":       {bg:"#8898A8",text:"#fff"},
   "Triumph":          {bg:"#FFD600",text:"#1a1400"},
 };
 function getEmotionColor(n){ return EMOTION_COLORS[n] || {bg:"#6c8ef7",text:"#fff"}; }
@@ -997,13 +997,13 @@ let blobTime = 0;
 function createBlob(index, total, color, name, score, canvasW, canvasH) {
   const cx = canvasW / 2;
   const cy = canvasH / 2;
-  const maxR = Math.min(canvasW, canvasH) * 0.38;
+  const maxR = Math.min(canvasW, canvasH) * 0.44;
   const s = (typeof score === 'number' && isFinite(score)) ? score : 0.1;
 
   // Distribute blobs in a loose cluster
   const angle = (index / Math.max(total, 1)) * Math.PI * 2 + Math.random() * 0.6;
-  const dist = maxR * 0.25 * (0.3 + Math.random() * 0.7);
-  const baseR = Math.max(maxR * (0.4 + s * 0.6), 8);
+  const dist = maxR * 0.22 * (0.3 + Math.random() * 0.7);
+  const baseR = Math.max(maxR * (0.5 + s * 0.5), 12);
 
   return {
     x: cx + Math.cos(angle) * dist,
@@ -1014,10 +1014,10 @@ function createBlob(index, total, color, name, score, canvasW, canvasH) {
     targetRadius: baseR,
     color: color,
     alpha: 0,
-    targetAlpha: 0.25 + s * 0.45,
+    targetAlpha: 0.55 + s * 0.45,
     phase: Math.random() * Math.PI * 2,
     speed: 0.3 + Math.random() * 0.4,
-    wobbleAmp: 0.08 + Math.random() * 0.06,
+    wobbleAmp: 0.10 + Math.random() * 0.08,
     name: name,
     score: s,
   };
@@ -1076,7 +1076,7 @@ function renderBlobs() {
 
     // Clear with light warm background
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#e8e6e2';
+    ctx.fillStyle = '#f5f5f3';
     ctx.fillRect(0, 0, w, h);
 
     blobTime += 0.016;
@@ -1102,11 +1102,12 @@ function renderBlobs() {
       const cx = b.x + driftX;
       const cy = b.y + driftY;
 
-      // Draw soft outer glow
+      // Draw rich gradient blob
       const outerR = Math.max(b.radius * 1.3, 3);
-      const grd = ctx.createRadialGradient(cx, cy, b.radius * 0.1, cx, cy, outerR);
-      grd.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha * 0.8})`);
-      grd.addColorStop(0.5, `rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha * 0.4})`);
+      const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, outerR);
+      grd.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha})`);
+      grd.addColorStop(0.35, `rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha * 0.85})`);
+      grd.addColorStop(0.65, `rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha * 0.5})`);
       grd.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
 
       ctx.save();
@@ -1114,18 +1115,19 @@ function renderBlobs() {
       ctx.fillStyle = grd;
       ctx.fill();
 
-      // Inner brighter core
+      // Bright saturated inner core
       if (b.radius > 10) {
-        const innerR = Math.max(b.radius * 0.7, 3);
+        const innerR = Math.max(b.radius * 0.65, 3);
         const innerGrd = ctx.createRadialGradient(
-          cx - b.radius * 0.15, cy - b.radius * 0.2, 0,
+          cx - b.radius * 0.1, cy - b.radius * 0.12, 0,
           cx, cy, innerR
         );
-        const rr = Math.min(255, rgb.r + 60), gg = Math.min(255, rgb.g + 60), bb = Math.min(255, rgb.b + 60);
-        innerGrd.addColorStop(0, `rgba(${rr},${gg},${bb},${b.alpha * 0.5})`);
+        const rr = Math.min(255, rgb.r + 80), gg = Math.min(255, rgb.g + 80), bb = Math.min(255, rgb.b + 80);
+        innerGrd.addColorStop(0, `rgba(${rr},${gg},${bb},${b.alpha * 0.9})`);
+        innerGrd.addColorStop(0.5, `rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha * 0.4})`);
         innerGrd.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
 
-        drawBlobPath(ctx, cx, cy, b.radius * 0.75, b.phase + 1, b.wobbleAmp * 0.7, blobTime * 1.2);
+        drawBlobPath(ctx, cx, cy, b.radius * 0.6, b.phase + 1, b.wobbleAmp * 0.7, blobTime * 1.2);
         ctx.fillStyle = innerGrd;
         ctx.fill();
       }
@@ -1136,8 +1138,9 @@ function renderBlobs() {
     // Subtle white specular highlight overlay
     ctx.save();
     ctx.globalCompositeOperation = 'overlay';
-    const specGrd = ctx.createRadialGradient(w * 0.4, h * 0.3, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.6);
-    specGrd.addColorStop(0, 'rgba(255,255,255,0.12)');
+    const specGrd = ctx.createRadialGradient(w * 0.35, h * 0.28, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+    specGrd.addColorStop(0, 'rgba(255,255,255,0.22)');
+    specGrd.addColorStop(0.5, 'rgba(255,255,255,0.05)');
     specGrd.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = specGrd;
     ctx.fillRect(0, 0, w, h);
