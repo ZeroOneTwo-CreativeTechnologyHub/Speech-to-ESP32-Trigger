@@ -393,15 +393,16 @@ let recognition = null, isListening = false;
 let ws = null, bleChar = null, currentTab = 'ws';
 let serialPort = null, serialWriter = null, serialReader = null;
 let triggers = [
-  {id:1, phrase:'who',   duration:500, pattern:'single', intensity:255},
-  {id:2, phrase:'what',  duration:500, pattern:'single', intensity:255},
-  {id:3, phrase:'where', duration:500, pattern:'single', intensity:255},
-  {id:4, phrase:'when',  duration:500, pattern:'single', intensity:255},
-  {id:5, phrase:'why',   duration:500, pattern:'single', intensity:255},
-  {id:6, phrase:'how',   duration:500, pattern:'single', intensity:255},
-  {id:7, phrase:'which', duration:500, pattern:'single', intensity:255},
+  {id:1, phrase:'who',   duration:400, pattern:'triple', intensity:200, caseSensitive:false},
+  {id:2, phrase:'what',  duration:400, pattern:'triple', intensity:200, caseSensitive:false},
+  {id:3, phrase:'where', duration:400, pattern:'triple', intensity:200, caseSensitive:false},
+  {id:4, phrase:'when',  duration:400, pattern:'triple', intensity:200, caseSensitive:false},
+  {id:5, phrase:'why',   duration:400, pattern:'triple', intensity:200, caseSensitive:false},
+  {id:6, phrase:'how',   duration:400, pattern:'triple', intensity:200, caseSensitive:false},
+  {id:7, phrase:'which', duration:400, pattern:'triple', intensity:200, caseSensitive:false},
+  {id:8, phrase:'Vera',  duration:400, pattern:'single', intensity:200, caseSensitive:false},
 ];
-let nextId = 8;
+let nextId = 9;
 
 // Hume
 let humeWs = null;
