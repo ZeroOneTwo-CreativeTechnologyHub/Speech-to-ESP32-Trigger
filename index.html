@@ -393,14 +393,14 @@ let recognition = null, isListening = false;
 let ws = null, bleChar = null, currentTab = 'ws';
 let serialPort = null, serialWriter = null, serialReader = null;
 let triggers = [
-  {id:1, phrase:'who',   duration:400, pattern:'triple', intensity:200, caseSensitive:false},
-  {id:2, phrase:'what',  duration:400, pattern:'triple', intensity:200, caseSensitive:false},
-  {id:3, phrase:'where', duration:400, pattern:'triple', intensity:200, caseSensitive:false},
-  {id:4, phrase:'when',  duration:400, pattern:'triple', intensity:200, caseSensitive:false},
-  {id:5, phrase:'why',   duration:400, pattern:'triple', intensity:200, caseSensitive:false},
-  {id:6, phrase:'how',   duration:400, pattern:'triple', intensity:200, caseSensitive:false},
-  {id:7, phrase:'which', duration:400, pattern:'triple', intensity:200, caseSensitive:false},
-  {id:8, phrase:'Vera',  duration:400, pattern:'single', intensity:200, caseSensitive:false},
+  {id:1, phrase:'who',   duration:400, pattern:'triple', intensity:255, caseSensitive:false},
+  {id:2, phrase:'what',  duration:400, pattern:'triple', intensity:255, caseSensitive:false},
+  {id:3, phrase:'where', duration:400, pattern:'triple', intensity:255, caseSensitive:false},
+  {id:4, phrase:'when',  duration:400, pattern:'triple', intensity:255, caseSensitive:false},
+  {id:5, phrase:'why',   duration:400, pattern:'triple', intensity:255, caseSensitive:false},
+  {id:6, phrase:'how',   duration:400, pattern:'triple', intensity:255, caseSensitive:false},
+  {id:7, phrase:'which', duration:400, pattern:'triple', intensity:255, caseSensitive:false},
+  {id:8, phrase:'Vera',  duration:400, pattern:'single', intensity:255, caseSensitive:false},
 ];
 let nextId = 9;
 
@@ -567,7 +567,7 @@ function sendCommand(obj){
     }else log('USB not connected — command not sent','warn');
   }
 }
-function sendTest(){sendCommand({cmd:'vibrate',phrase:'test',duration:300,pattern:'double',intensity:200});}
+function sendTest(){sendCommand({cmd:'vibrate',phrase:'test',duration:300,pattern:'double',intensity:255});}
 
 function wsConnect(){
   const url=document.getElementById('ws-url').value.trim(); if(ws)ws.close();
