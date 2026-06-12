@@ -130,6 +130,19 @@
     border-radius: 50%; display: flex; align-items: center; justify-content: center;
   }
   #emotion-box.fullscreen .fs-close:hover { opacity: 1; }
+  .fs-mic {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 10; border: none; cursor: pointer;
+    padding: 12px 28px; border-radius: 40px; font-size: 15px; font-weight: 700;
+    font-family: inherit; letter-spacing: .02em;
+    background: rgba(0,0,0,0.25); color: rgba(255,255,255,0.7);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    transition: all .2s; display: none;
+  }
+  .fs-mic:hover { background: rgba(0,0,0,0.4); color: #fff; }
+  .fs-mic.listening { background: rgba(52,211,153,0.25); color: rgba(52,211,153,0.9); }
+  .fs-mic.listening:hover { background: rgba(52,211,153,0.4); color: #fff; }
+  #emotion-box.fullscreen .fs-mic { display: block; }
 
   .hume-status { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--muted); }
   .hume-status .dot { width: 6px; height: 6px; }
@@ -316,6 +329,7 @@
           </div>
         </div>
         <span class="emotion-hint">click to fullscreen</span>
+        <button class="fs-mic" id="fs-mic-btn" onclick="event.stopPropagation();toggleMic();updateFsMic();">Start Mic</button>
       </div>
     </div>
 
@@ -551,6 +565,18 @@ function updateMicUI(on){
   btn.textContent=on?'🔴 Listening…  (click to stop)':'🎤 Start Listening';
   document.getElementById('dot-mic').className='dot'+(on?' green':'');
   document.getElementById('label-mic').textContent=on?'Mic active':'Mic off';
+  updateFsMic();
+}
+
+function updateFsMic(){
+  const btn=document.getElementById('fs-mic-btn');
+  if(isListening){
+    btn.className='fs-mic listening';
+    btn.textContent='Stop Mic';
+  }else{
+    btn.className='fs-mic';
+    btn.textContent='Start Mic';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1329,6 +1355,7 @@ function toggleEmotionFullscreen(){
     const btn=document.createElement('button'); btn.className='fs-close'; btn.innerHTML='✕';
     btn.onclick=e=>{e.stopPropagation();toggleEmotionFullscreen();}; box.appendChild(btn);
     box.querySelector('.emotion-hint').textContent='click anywhere or ✕ to exit • ESC also works';
+    updateFsMic();
   }else{
     box.classList.remove('fullscreen');
     const btn=box.querySelector('.fs-close'); if(btn) btn.remove();
