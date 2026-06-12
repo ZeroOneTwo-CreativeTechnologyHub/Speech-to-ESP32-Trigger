@@ -134,6 +134,16 @@
   .hume-status { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--muted); }
   .hume-status .dot { width: 6px; height: 6px; }
 
+  /* ── Noise Gate ──────────────────────────────────────────────── */
+  .vol-meter { height: 10px; background: var(--bg); border-radius: 5px; position: relative; overflow: hidden; }
+  .vol-fill { height: 100%; width: 0%; border-radius: 5px; transition: width .1s, background-color .2s; background: var(--green); }
+  .vol-fill.hot { background: var(--amber); }
+  .vol-fill.clip { background: var(--red); }
+  .vol-threshold { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); border-radius: 1px; transition: left .1s; }
+  .gate-status { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; white-space: nowrap; text-transform: uppercase; letter-spacing: .05em; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); min-width: 70px; text-align: center; }
+  .gate-status.speaking { background: #1a2e1a; color: var(--green); border-color: #2d4a2d; }
+  #noise-threshold { width: 100%; accent-color: var(--accent); }
+
   /* ── Lock Screen ─────────────────────────────────────────────── */
   #lock-screen {
     position: fixed; inset: 0; z-index: 99999;
@@ -317,6 +327,21 @@
     </div>
 
     <button class="mic-btn" id="mic-btn" onclick="toggleMic()">🎤 Start Listening</button>
+
+    <!-- NOISE GATE -->
+    <div class="panel">
+      <h2>Noise Gate</h2>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <div style="flex:1">
+          <div class="vol-meter"><div class="vol-fill" id="vol-fill"></div><div class="vol-threshold" id="vol-threshold-line"></div></div>
+        </div>
+        <div class="gate-status" id="gate-status">Quiet</div>
+      </div>
+      <div class="mini-field">
+        <label>Threshold — <span id="threshold-val">15</span>%  (drag to adjust — audio below this is ignored)</label>
+        <input type="range" id="noise-threshold" min="1" max="50" value="15" oninput="updateThreshold(this.value)">
+      </div>
+    </div>
 
     <!-- MOTOR DEFAULTS -->
     <div class="panel">
@@ -786,17 +811,66 @@ let humeStream = null;
 let humePcmBuffer = [];
 let humeSendTimer = null;
 let humeChunkCount = 0;
+let humeAnalyser = null;
+let volumeMonitorId = null;
+let currentVolume = 0;
+let noiseThreshold = 15; // percentage
+let isAboveThreshold = false;
+
+function updateThreshold(val) {
+  noiseThreshold = +val;
+  document.getElementById('threshold-val').textContent = val;
+  document.getElementById('vol-threshold-line').style.left = val + '%';
+}
+
+function monitorVolume() {
+  if (!humeAnalyser) return;
+  const data = new Uint8Array(humeAnalyser.fftSize);
+  humeAnalyser.getByteTimeDomainData(data);
+
+  // Calculate RMS volume as percentage
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) {
+    const v = (data[i] - 128) / 128;
+    sum += v * v;
+  }
+  const rms = Math.sqrt(sum / data.length);
+  currentVolume = Math.min(100, Math.round(rms * 400)); // scale to 0-100
+
+  // Update meter
+  const fill = document.getElementById('vol-fill');
+  fill.style.width = currentVolume + '%';
+  fill.className = 'vol-fill' + (currentVolume > 70 ? ' clip' : currentVolume > 45 ? ' hot' : '');
+
+  // Update gate status
+  isAboveThreshold = currentVolume > noiseThreshold;
+  const status = document.getElementById('gate-status');
+  if (isAboveThreshold) {
+    status.textContent = 'Speaking';
+    status.className = 'gate-status speaking';
+  } else {
+    status.textContent = 'Quiet';
+    status.className = 'gate-status';
+  }
+
+  volumeMonitorId = requestAnimationFrame(monitorVolume);
+}
 
 async function startHumeCapture(){
   if(humeProcessor) return; // already running
 
   try{
     humeStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true }
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
     });
 
     humeAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const source = humeAudioCtx.createMediaStreamSource(humeStream);
+
+    // Analyser for volume monitoring
+    humeAnalyser = humeAudioCtx.createAnalyser();
+    humeAnalyser.fftSize = 2048;
+    source.connect(humeAnalyser);
 
     // ScriptProcessor captures raw PCM every buffer cycle
     humeProcessor = humeAudioCtx.createScriptProcessor(4096, 1, 1);
@@ -805,7 +879,7 @@ async function startHumeCapture(){
     // Mute output to prevent feedback
     const gain = humeAudioCtx.createGain();
     gain.gain.value = 0;
-    source.connect(humeProcessor);
+    humeAnalyser.connect(humeProcessor);
     humeProcessor.connect(gain);
     gain.connect(humeAudioCtx.destination);
 
@@ -814,11 +888,17 @@ async function startHumeCapture(){
       humePcmBuffer.push(new Float32Array(input));
     };
 
+    // Initialise threshold line position
+    document.getElementById('vol-threshold-line').style.left = noiseThreshold + '%';
+
+    // Start volume monitor
+    monitorVolume();
+
     // Send accumulated audio to Hume every 3.5 seconds
     humeChunkCount = 0;
     humeSendTimer = setInterval(() => sendHumeChunk(), 3500);
 
-    log('Hume audio capture started (ScriptProcessor, 3.5s intervals)');
+    log('Hume audio capture started (noise gate active)');
 
   }catch(err){
     log(`Hume mic error: ${err.message}`,'err');
@@ -827,10 +907,16 @@ async function startHumeCapture(){
 
 function stopHumeCapture(){
   if(humeSendTimer){ clearInterval(humeSendTimer); humeSendTimer = null; }
+  if(volumeMonitorId){ cancelAnimationFrame(volumeMonitorId); volumeMonitorId = null; }
   if(humeProcessor){ try{ humeProcessor.disconnect(); }catch(e){} humeProcessor = null; }
+  if(humeAnalyser){ try{ humeAnalyser.disconnect(); }catch(e){} humeAnalyser = null; }
   if(humeAudioCtx){ try{ humeAudioCtx.close(); }catch(e){} humeAudioCtx = null; }
   if(humeStream){ humeStream.getTracks().forEach(t=>t.stop()); humeStream = null; }
   humePcmBuffer = [];
+  // Reset meter
+  document.getElementById('vol-fill').style.width = '0%';
+  document.getElementById('gate-status').textContent = 'Quiet';
+  document.getElementById('gate-status').className = 'gate-status';
 }
 
 async function sendHumeChunk(){
@@ -844,6 +930,17 @@ async function sendHumeChunk(){
   let off = 0;
   for(const chunk of humePcmBuffer){ combined.set(chunk, off); off += chunk.length; }
   humePcmBuffer = []; // reset for next interval
+
+  // ── Noise gate: check RMS of this chunk ──────────────────
+  let sum = 0;
+  for(let i = 0; i < combined.length; i++) sum += combined[i] * combined[i];
+  const chunkRms = Math.sqrt(sum / combined.length);
+  const chunkVol = Math.min(100, Math.round(chunkRms * 400));
+
+  if(chunkVol < noiseThreshold){
+    // Below threshold — discard silently
+    return;
+  }
 
   humeChunkCount++;
 
