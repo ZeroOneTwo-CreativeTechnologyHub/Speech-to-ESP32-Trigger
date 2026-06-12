@@ -1173,15 +1173,24 @@ startBlobAnimation();
 // ═══════════════════════════════════════════════════════════════════
 //  UPDATE EMOTION BLOBS from Hume data
 // ═══════════════════════════════════════════════════════════════════
+// Only track these emotions — ignore the rest of Hume's 48
+const TRACKED_EMOTIONS = new Set([
+  'Joy', 'Excitement', 'Distress', 'Anger', 'Sadness', 'Calmness', 'Contentment'
+]);
+
 function updateEmotionBox(emotions){
-  const sorted=[...emotions].sort((a,b)=>b.score-a.score);
-  const top=sorted[0], top5=sorted.slice(0,5);
+  // Filter to only tracked emotions
+  const filtered = emotions.filter(e => TRACKED_EMOTIONS.has(e.name));
+  if(filtered.length === 0) return;
+
+  const sorted=[...filtered].sort((a,b)=>b.score-a.score);
+  const top=sorted[0], topN=sorted.slice(0, 7);
   if(!top) return;
 
   // Update text labels
   document.getElementById('emo-label').textContent=top.name;
   document.getElementById('emo-score').textContent=`${(top.score*100).toFixed(1)}%`;
-  document.getElementById('emo-list').textContent=top5.slice(1).map(e=>`${e.name} ${(e.score*100).toFixed(0)}%`).join('  ·  ');
+  document.getElementById('emo-list').textContent=topN.slice(1).map(e=>`${e.name} ${(e.score*100).toFixed(0)}%`).join('  ·  ');
 
   // Get canvas dimensions
   const box = document.getElementById('emotion-box');
@@ -1190,10 +1199,10 @@ function updateEmotionBox(emotions){
   const h = rect.height;
 
   // Create/update blobs for top 5 emotions
-  const newBlobs = top5.map((em, i) => {
+  const newBlobs = topN.map((em, i) => {
     const color = getEmotionColor(em.name);
     const existing = blobs[i];
-    const b = createBlob(i, top5.length, color.bg, em.name, em.score, w, h);
+    const b = createBlob(i, topN.length, color.bg, em.name, em.score, w, h);
 
     if (existing) {
       // Preserve current animated position, smoothly transition to new targets
@@ -1208,7 +1217,7 @@ function updateEmotionBox(emotions){
 
   blobs = newBlobs;
 
-  log(`🎭 ${top.name} ${(top.score*100).toFixed(0)}% | ${top5.slice(1).map(e=>e.name).join(', ')}`,'emo');
+  log(`🎭 ${top.name} ${(top.score*100).toFixed(0)}% | ${topN.slice(1).map(e=>e.name).join(', ')}`,'emo');
 }
 
 // ═══════════════════════════════════════════════════════════════════
