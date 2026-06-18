@@ -352,8 +352,8 @@
         <div class="gate-status" id="gate-status">Quiet</div>
       </div>
       <div class="mini-field">
-        <label>Threshold — <span id="threshold-val">15</span>%  (drag to adjust — audio below this is ignored)</label>
-        <input type="range" id="noise-threshold" min="1" max="50" value="15" oninput="updateThreshold(this.value)">
+        <label>Threshold — <span id="threshold-val">5</span>%  (drag to adjust — audio below this is ignored)</label>
+        <input type="range" id="noise-threshold" min="1" max="50" value="5" oninput="updateThreshold(this.value)">
       </div>
     </div>
 
@@ -840,7 +840,7 @@ let humeChunkCount = 0;
 let humeAnalyser = null;
 let volumeMonitorId = null;
 let currentVolume = 0;
-let noiseThreshold = 15; // percentage
+let noiseThreshold = 5; // percentage
 let isAboveThreshold = false;
 
 function updateThreshold(val) {
@@ -964,7 +964,8 @@ async function sendHumeChunk(){
   const chunkVol = Math.min(100, Math.round(chunkRms * 400));
 
   if(chunkVol < noiseThreshold){
-    // Below threshold — discard silently
+    // Below threshold — discard but LOG it so user can diagnose
+    log(`Noise gate: chunk dropped (vol ${chunkVol}% < threshold ${noiseThreshold}%)`, 'warn');
     return;
   }
 
