@@ -3,32 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Speech → Haptic Controller (Offline Emotion)</title>
+<title>Speech → Haptic Controller + EVI Emotion</title>
 <style>
-  :root { --bg:#0f1117;--surface:#1a1d27;--surface2:#242736;--border:#2e3248;--accent:#6c8ef7;--accent2:#a78bfa;--green:#34d399;--red:#f87171;--amber:#fbbf24;--text:#e2e8f0;--muted:#8892a4; }
+  :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#242736;--border:#2e3248;--accent:#6c8ef7;--accent2:#a78bfa;--green:#34d399;--red:#f87171;--amber:#fbbf24;--text:#e2e8f0;--muted:#8892a4}
   *{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh}
   h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px}
   .layout{display:grid;grid-template-columns:340px 1fr;grid-template-rows:auto 1fr;gap:12px;padding:16px;min-height:100vh}
   .header{grid-column:1/-1;display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;flex-wrap:wrap}.header h1{font-size:16px;font-weight:700;flex:1}
   .badge{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--surface2)}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}.dot.green{background:var(--green);box-shadow:0 0 6px var(--green)}.dot.amber{background:var(--amber);box-shadow:0 0 6px var(--amber)}.dot.red{background:var(--red)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}.dot.green{background:var(--green);box-shadow:0 0 6px var(--green)}.dot.amber{background:var(--amber);box-shadow:0 0 6px var(--amber)}
   .panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px}.left{display:flex;flex-direction:column;gap:12px}
   .tabs{display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:4px;margin-bottom:14px}.tab{flex:1;padding:6px;text-align:center;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);transition:all .15s}.tab.active{background:var(--accent);color:#fff}
-  .field{margin-bottom:10px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}.field input,.field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit}.field input:focus,.field select:focus{border-color:var(--accent)}
+  .field{margin-bottom:10px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}.field input,.field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit}.field input:focus{border-color:var(--accent)}
   .btn{padding:8px 16px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}.btn:hover{opacity:.85}.btn:active{transform:scale(.97)}.btn:disabled{opacity:.4;cursor:not-allowed}.btn.primary{background:var(--accent);color:#fff}.btn.danger{background:var(--red);color:#fff}.btn.ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}.btn.sm{padding:5px 10px;font-size:12px}.btn-row{display:flex;gap:8px;flex-wrap:wrap}
   .trigger-add{display:flex;gap:8px;margin-bottom:12px}.trigger-add input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none}
-  .trigger-list{display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto}.trigger-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}.trigger-card.firing{border-color:var(--accent2);background:#1e1b35;animation:pulse .3s ease}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+  .trigger-list{display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto}.trigger-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}.trigger-card.firing{border-color:var(--accent2);background:#1e1b35;animation:pulse .3s ease}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
   .trigger-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}.trigger-phrase{flex:1;font-weight:600;font-size:13px}.trigger-settings{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .mini-field label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px}.mini-field select,.mini-field input[type=number]{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:5px 7px;color:var(--text);font-size:12px;outline:none;font-family:inherit}
   .right{display:flex;flex-direction:column;gap:12px}
-  .transcript-box{flex:1;background:var(--surface2);border-radius:8px;padding:14px;min-height:100px;max-height:150px;overflow-y:auto;font-size:15px;line-height:1.7}.transcript-box .interim{color:var(--muted);font-style:italic}.transcript-box mark{background:#3b2f7a;color:var(--accent2);border-radius:3px;padding:0 3px}
-  .mic-btn{width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:8px;border:none;cursor:pointer;transition:all .2s;background:var(--surface2);color:var(--muted);border:2px solid var(--border);font-family:inherit}.mic-btn:disabled{opacity:.35;cursor:not-allowed}.mic-btn.listening{background:#1a2e1a;color:var(--green);border-color:var(--green);box-shadow:0 0 20px #34d39920;animation:breathe 2s ease infinite}@keyframes breathe{0%,100%{box-shadow:0 0 20px #34d39920}50%{box-shadow:0 0 40px #34d39940}}
+  .transcript-box{background:var(--surface2);border-radius:8px;padding:14px;min-height:100px;max-height:150px;overflow-y:auto;font-size:15px;line-height:1.7}.transcript-box .interim{color:var(--muted);font-style:italic}.transcript-box mark{background:#3b2f7a;color:var(--accent2);border-radius:3px;padding:0 3px}
+  .mic-btn{width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:8px;border:none;cursor:pointer;transition:all .2s;background:var(--surface2);color:var(--muted);border:2px solid var(--border);font-family:inherit}.mic-btn.listening{background:#1a2e1a;color:var(--green);border-color:var(--green);box-shadow:0 0 20px #34d39920;animation:breathe 2s ease infinite}@keyframes breathe{0%,100%{box-shadow:0 0 20px #34d39920}50%{box-shadow:0 0 40px #34d39940}}
   .log{background:var(--bg);border-radius:8px;padding:12px;font-size:12px;font-family:monospace;max-height:130px;overflow-y:auto;color:var(--muted)}.log .entry{padding:2px 0;border-bottom:1px solid #1a1d27}.log .entry.ok{color:var(--green)}.log .entry.warn{color:var(--amber)}.log .entry.fire{color:var(--accent2)}.log .entry.err{color:var(--red)}.log .entry.emo{color:#f0abfc}
   .confidence-bar{height:4px;background:var(--surface2);border-radius:2px;margin-top:6px;overflow:hidden}.confidence-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .3s}.no-speech{color:var(--muted);font-style:italic;font-size:13px;text-align:center;margin-top:40px}
   #esp-info{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}#esp-info code{background:var(--bg);padding:1px 4px;border-radius:3px;color:var(--accent)}
-  .progress-track{height:4px;background:var(--bg);border-radius:2px;margin-top:6px;overflow:hidden;display:none}.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;transition:width .3s}
-  .model-status-text{font-size:11px;color:var(--muted);margin-top:6px}.model-status-text.ready{color:var(--green)}.model-status-text.loading{color:var(--amber)}.model-status-text.error{color:var(--red)}
-  .offline-tag{display:inline-block;padding:2px 6px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:#1a2e1a;color:var(--green);border:1px solid #2d4a2d}
+  .hume-status{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--muted)}.hume-status .dot{width:6px;height:6px}
   .vol-meter{height:10px;background:var(--bg);border-radius:5px;position:relative;overflow:hidden}.vol-fill{height:100%;width:0%;border-radius:5px;transition:width .1s,background-color .2s;background:var(--green)}.vol-fill.hot{background:var(--amber)}.vol-fill.clip{background:var(--red)}.vol-threshold{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);border-radius:1px}.gate-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;white-space:nowrap;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--border);background:var(--surface2);color:var(--muted);min-width:70px;text-align:center}.gate-status.speaking{background:#1a2e1a;color:var(--green);border-color:#2d4a2d}#noise-threshold{width:100%;accent-color:var(--accent)}
   .emotion-box-wrapper{position:relative}#emotion-box{width:100%;height:280px;border-radius:10px;background:#f5f5f3;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;cursor:pointer;position:relative;overflow:hidden;border:1px solid var(--border)}#emotion-box canvas{position:absolute;inset:0;width:100%;height:100%}
   .emo-overlay{position:relative;z-index:2;padding:14px 18px;width:100%;display:flex;align-items:flex-end;justify-content:space-between;pointer-events:none}.emo-overlay .emotion-label{font-size:22px;font-weight:800;color:#1a1a2e;text-shadow:0 1px 8px rgba(255,255,255,0.4)}.emo-overlay .emotion-score{font-size:12px;font-weight:600;color:#1a1a2e;opacity:.7}.emo-overlay .emotion-list{font-size:10px;color:#1a1a2e;opacity:.5;margin-top:2px}#emotion-box .emotion-hint{position:absolute;bottom:8px;right:12px;font-size:10px;opacity:.35;z-index:3;color:#1a1a2e}
@@ -45,89 +43,378 @@
   <div class="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div>
   <div class="lock-error" id="lock-error"></div>
   <div class="pin-pad"><button class="pin-key" onclick="pinPress('1')">1</button><button class="pin-key" onclick="pinPress('2')">2</button><button class="pin-key" onclick="pinPress('3')">3</button><button class="pin-key" onclick="pinPress('4')">4</button><button class="pin-key" onclick="pinPress('5')">5</button><button class="pin-key" onclick="pinPress('6')">6</button><button class="pin-key" onclick="pinPress('7')">7</button><button class="pin-key" onclick="pinPress('8')">8</button><button class="pin-key" onclick="pinPress('9')">9</button><button class="pin-key wide" onclick="pinClear()">Clear</button><button class="pin-key" onclick="pinPress('0')">0</button><button class="pin-key wide" onclick="pinBack()">⌫</button></div></div>
+
 <div class="layout" id="main-layout" style="display:none">
-  <div class="header"><h1>🎤 Speech → Haptic Controller</h1><span class="offline-tag">Offline Emotion</span>
+  <div class="header"><h1>🎤 Speech → Haptic Controller</h1>
     <div class="badge" id="badge-mic"><div class="dot" id="dot-mic"></div><span id="label-mic">Mic off</span></div>
     <div class="badge" id="badge-conn"><div class="dot" id="dot-conn"></div><span id="label-conn">Disconnected</span></div>
-    <div class="badge" id="badge-model"><div class="dot" id="dot-model"></div><span id="label-model">Model not loaded</span></div>
+    <div class="badge" id="badge-evi"><div class="dot" id="dot-evi"></div><span id="label-evi">EVI off</span></div>
     <div class="badge" id="badge-fire" style="opacity:0"><div class="dot amber"></div><span>⚡ Trigger!</span></div></div>
+
   <div class="left">
+    <!-- ESP32 -->
     <div class="panel"><h2>ESP32 Connection</h2>
       <div class="tabs"><div class="tab active" id="tab-ws" onclick="switchTab('ws')">WebSocket</div><div class="tab" id="tab-ble" onclick="switchTab('ble')">Bluetooth</div><div class="tab" id="tab-usb" onclick="switchTab('usb')">USB Serial</div></div>
       <div id="pane-ws"><div class="field"><label>ESP32 WebSocket URL</label><input type="text" id="ws-url" value="ws://192.168.1.100:81"></div><div class="btn-row"><button class="btn primary" onclick="wsConnect()">Connect</button><button class="btn ghost" onclick="wsDisconnect()">Disconnect</button><button class="btn ghost sm" onclick="sendTest()">Test</button></div><p id="esp-info">Receives: <code>{"cmd":"vibrate","duration":500}</code></p></div>
       <div id="pane-ble" style="display:none"><p style="color:var(--muted);font-size:12px;margin-bottom:12px">BLE UART (Nordic)</p><div class="btn-row"><button class="btn primary" onclick="bleConnect()">Scan & Connect</button><button class="btn ghost" onclick="bleDisconnect()">Disconnect</button><button class="btn ghost sm" onclick="sendTest()">Test</button></div></div>
       <div id="pane-usb" style="display:none"><div class="field"><label>Baud Rate</label><select id="usb-baud"><option value="9600">9600</option><option value="115200" selected>115200</option><option value="460800">460800</option></select></div><div class="btn-row"><button class="btn primary" onclick="usbConnect()">Select Port & Connect</button><button class="btn ghost" onclick="usbDisconnect()">Disconnect</button><button class="btn ghost sm" onclick="sendTest()">Test</button></div></div></div>
-    <div class="panel"><h2>Emotion Model <span class="offline-tag" style="margin-left:6px">Offline</span></h2>
-      <div class="field"><label>HuggingFace Model</label><input type="text" id="model-id" value="prithivMLmods/Speech-Emotion-Classification-ONNX"></div>
-      <button class="btn primary" id="btn-load" onclick="loadModel()" style="width:100%">Load Model</button>
-      <div class="progress-track" id="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-      <div class="model-status-text" id="model-status">First load downloads ~90 MB. Cached permanently after.</div></div>
+
+    <!-- HUME EVI 3 -->
+    <div class="panel"><h2>Hume EVI 3 — Emotion</h2>
+      <div class="field"><label>Hume API Key</label><input type="password" id="hume-key" placeholder="Paste your Hume API key…"></div>
+      <div class="field"><label>Config ID (optional — create at app.hume.ai)</label><input type="text" id="evi-config" placeholder="Leave blank for default"></div>
+      <div class="btn-row"><button class="btn primary" onclick="eviConnect()">Connect</button><button class="btn ghost" onclick="eviDisconnect()">Disconnect</button></div>
+      <div class="hume-status"><div class="dot" id="dot-evi-inner"></div><span id="evi-status-text">Not connected</span></div></div>
+
+    <!-- TRIGGERS -->
     <div class="panel" style="flex:1"><h2>Trigger Phrases</h2><div class="trigger-add"><input type="text" id="new-phrase" placeholder="e.g. stop" onkeydown="if(event.key==='Enter')addTrigger()"><button class="btn primary sm" onclick="addTrigger()">Add</button></div><div class="trigger-list" id="trigger-list"></div></div></div>
+
   <div class="right">
+    <!-- EMOTION BLOBS -->
     <div class="panel emotion-box-wrapper"><h2>Emotion Colour</h2>
       <div id="emotion-box" onclick="toggleFS()"><canvas id="blob-canvas"></canvas>
         <div class="emo-overlay"><div><div class="emotion-label" id="emo-label">Waiting…</div><div class="emotion-score" id="emo-score"></div><div class="emotion-list" id="emo-list"></div></div></div>
         <span class="emotion-hint">click to fullscreen</span><button class="fs-mic" id="fs-mic-btn" onclick="event.stopPropagation();toggleMic();updateFsMic();">Start Mic</button></div></div>
-    <div class="panel"><h2>Live Transcript</h2><div class="transcript-box" id="transcript"><div class="no-speech">Load model, then press Start Listening…</div></div><div class="confidence-bar"><div class="confidence-fill" id="conf-fill" style="width:0%"></div></div></div>
-    <button class="mic-btn" id="mic-btn" onclick="toggleMic()" disabled>🎤 Load Model First</button>
+
+    <!-- TRANSCRIPT -->
+    <div class="panel"><h2>Live Transcript</h2><div class="transcript-box" id="transcript"><div class="no-speech">Connect EVI, then press Start Listening…</div></div><div class="confidence-bar"><div class="confidence-fill" id="conf-fill" style="width:0%"></div></div></div>
+    <button class="mic-btn" id="mic-btn" onclick="toggleMic()">🎤 Start Listening</button>
+
+    <!-- NOISE GATE -->
     <div class="panel"><h2>Noise Gate</h2><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><div style="flex:1"><div class="vol-meter"><div class="vol-fill" id="vol-fill"></div><div class="vol-threshold" id="vol-threshold-line" style="left:5%"></div></div></div><div class="gate-status" id="gate-status">Quiet</div></div><div class="mini-field"><label>Threshold — <span id="threshold-val">5</span>%</label><input type="range" id="noise-threshold" min="1" max="50" value="5" oninput="updateThreshold(this.value)"></div></div>
+
+    <!-- MOTOR DEFAULTS -->
     <div class="panel"><h2>Global Motor Defaults</h2><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px"><div class="mini-field"><label>Duration</label><input type="number" id="g-duration" value="400" min="50" max="5000" step="50"></div><div class="mini-field"><label>Pattern</label><select id="g-pattern"><option value="single">Single</option><option value="double">Double</option><option value="triple" selected>Triple</option><option value="long">Long</option><option value="sos">SOS</option></select></div><div class="mini-field"><label>PWM</label><input type="number" id="g-intensity" value="255" min="0" max="255"></div></div></div>
-    <div class="panel"><h2>Activity Log</h2><div class="log" id="log"></div></div></div></div>
+
+    <!-- LOG -->
+    <div class="panel"><h2>Activity Log</h2><div class="log" id="log"></div></div>
+  </div>
+</div>
+
 <script>
-const LABEL_MAP={'angry':'Anger','calm':'Calmness','disgust':'Disgust','fear':'Distress','happy':'Joy','neutral':'Contentment','sad':'Sadness','surprised':'Excitement','Angry':'Anger','Calm':'Calmness','Disgust':'Disgust','Fear':'Distress','Happy':'Joy','Neutral':'Contentment','Sad':'Sadness','Surprised':'Excitement','ANGRY':'Anger','CALM':'Calmness','DISGUST':'Disgust','FEAR':'Distress','HAPPY':'Joy','NEUTRAL':'Contentment','SAD':'Sadness','SURPRISED':'Excitement','LABEL_0':'Anger','LABEL_1':'Calmness','LABEL_2':'Disgust','LABEL_3':'Distress','LABEL_4':'Joy','LABEL_5':'Contentment','LABEL_6':'Sadness','LABEL_7':'Excitement','anger':'Anger','calmness':'Calmness','distress':'Distress','joy':'Joy','contentment':'Contentment','sadness':'Sadness','excitement':'Excitement'};
-const EC={Anger:{bg:"#EF2020",text:"#fff"},Calmness:{bg:"#4DD0C4",text:"#0a1e1c"},Disgust:{bg:"#6DA030",text:"#fff"},Distress:{bg:"#A040D4",text:"#fff"},Joy:{bg:"#FFD600",text:"#1a1800"},Contentment:{bg:"#5CD65C",text:"#0a1f0b"},Sadness:{bg:"#4060D0",text:"#fff"},Excitement:{bg:"#FF5722",text:"#fff"}};
-function getEC(l){const n=LABEL_MAP[l]||l;return EC[n]||{bg:"#6c8ef7",text:"#fff"};}function friendlyName(l){return LABEL_MAP[l]||l;}
-const TRACKED=new Set(['Anger','Calmness','Distress','Joy','Contentment','Sadness','Excitement']);
-let recognition=null,isListening=false,ws=null,bleChar=null,currentTab='ws',serialPort=null,serialWriter=null,serialReader=null;
-let triggers=[{id:1,phrase:'who',duration:400,pattern:'triple',intensity:255,caseSensitive:false},{id:2,phrase:'what',duration:400,pattern:'triple',intensity:255,caseSensitive:false},{id:3,phrase:'where',duration:400,pattern:'triple',intensity:255,caseSensitive:false},{id:4,phrase:'when',duration:400,pattern:'triple',intensity:255,caseSensitive:false},{id:5,phrase:'why',duration:400,pattern:'triple',intensity:255,caseSensitive:false},{id:6,phrase:'how',duration:400,pattern:'triple',intensity:255,caseSensitive:false},{id:7,phrase:'which',duration:400,pattern:'triple',intensity:255,caseSensitive:false},{id:8,phrase:'Vera',duration:400,pattern:'single',intensity:255,caseSensitive:false}];
-let nextId=9,TF=null,classifier=null,isModelLoaded=false;
-let audioCtx=null,audioProcessor=null,audioAnalyser=null,audioStream=null,pcmBuffer=[],classifyTimer=null,isClassifying=false,noiseThreshold=5,volumeMonitorId=null;
+// ═══════════════════════════════════════════════════════════════════
+//  EMOTION COLOURS — Hume's 48 prosody emotions (same as before)
+// ═══════════════════════════════════════════════════════════════════
+const EC={
+  "Joy":{bg:"#FFD600",text:"#1a1800"},"Excitement":{bg:"#FF5722",text:"#fff"},"Distress":{bg:"#A040D4",text:"#fff"},
+  "Anger":{bg:"#EF2020",text:"#fff"},"Sadness":{bg:"#4060D0",text:"#fff"},"Calmness":{bg:"#4DD0C4",text:"#0a1e1c"},
+  "Contentment":{bg:"#5CD65C",text:"#0a1f0b"},
+  "Admiration":{bg:"#FFD000",text:"#1a1200"},"Adoration":{bg:"#FF5CAD",text:"#fff"},"Amusement":{bg:"#FFD600",text:"#2a2200"},
+  "Anxiety":{bg:"#A040D4",text:"#fff"},"Awe":{bg:"#2979FF",text:"#fff"},"Boredom":{bg:"#90A4AE",text:"#fff"},
+  "Concentration":{bg:"#4054D6",text:"#fff"},"Confusion":{bg:"#CE70E0",text:"#fff"},"Contempt":{bg:"#C44040",text:"#fff"},
+  "Desire":{bg:"#E83C3C",text:"#fff"},"Determination":{bg:"#F9A825",text:"#1a1400"},"Disappointment":{bg:"#8098A8",text:"#fff"},
+  "Disgust":{bg:"#6DA030",text:"#fff"},"Ecstasy":{bg:"#FF2060",text:"#fff"},"Embarrassment":{bg:"#FF80AB",text:"#2a0015"},
+  "Enthusiasm":{bg:"#FF8500",text:"#fff"},"Envy":{bg:"#43A047",text:"#fff"},"Fear":{bg:"#7B1FA2",text:"#fff"},
+  "Gratitude":{bg:"#FFE94A",text:"#2a2400"},"Guilt":{bg:"#A07060",text:"#fff"},"Horror":{bg:"#880044",text:"#fff"},
+  "Interest":{bg:"#00BCD4",text:"#fff"},"Love":{bg:"#F50057",text:"#fff"},"Nostalgia":{bg:"#C09878",text:"#fff"},
+  "Pain":{bg:"#D32F2F",text:"#fff"},"Pride":{bg:"#9C27B0",text:"#fff"},"Realization":{bg:"#00E5FF",text:"#00272e"},
+  "Relief":{bg:"#66DD6A",text:"#0a1f0b"},"Romance":{bg:"#EC407A",text:"#fff"},"Sarcasm":{bg:"#FFB300",text:"#1a1400"},
+  "Satisfaction":{bg:"#5CD65C",text:"#0a1f0b"},"Shame":{bg:"#B07060",text:"#fff"},"Surprise (positive)":{bg:"#00E5FF",text:"#001a1f"},
+  "Surprise (negative)":{bg:"#FF8F00",text:"#fff"},"Sympathy":{bg:"#7C8FE0",text:"#fff"},"Tiredness":{bg:"#8898A8",text:"#fff"},
+  "Triumph":{bg:"#FFD600",text:"#1a1400"},
+};
+function getEC(n){return EC[n]||{bg:"#6c8ef7",text:"#fff"};}
+const TRACKED=new Set(['Joy','Excitement','Distress','Anger','Sadness','Calmness','Contentment']);
+
+// ═══════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════
+let recognition=null,isListening=false;
+let ws=null,bleChar=null,currentTab='ws',serialPort=null,serialWriter=null,serialReader=null;
+let triggers=[
+  {id:1,phrase:'who',duration:400,pattern:'triple',intensity:255,caseSensitive:false},
+  {id:2,phrase:'what',duration:400,pattern:'triple',intensity:255,caseSensitive:false},
+  {id:3,phrase:'where',duration:400,pattern:'triple',intensity:255,caseSensitive:false},
+  {id:4,phrase:'when',duration:400,pattern:'triple',intensity:255,caseSensitive:false},
+  {id:5,phrase:'why',duration:400,pattern:'triple',intensity:255,caseSensitive:false},
+  {id:6,phrase:'how',duration:400,pattern:'triple',intensity:255,caseSensitive:false},
+  {id:7,phrase:'which',duration:400,pattern:'triple',intensity:255,caseSensitive:false},
+  {id:8,phrase:'Vera',duration:400,pattern:'single',intensity:255,caseSensitive:false},
+];
+let nextId=9;
+
+// EVI
+let eviWs=null,eviApiKey='',eviWantConnected=false,eviReconnectTimer=null,eviReconnectDelay=1000,eviReconnectCount=0;
+let eviRecorder=null,eviStream=null,eviDataInterval=null;
+
+// Audio monitoring
+let monitorCtx=null,monitorAnalyser=null,monitorProcessor=null,volumeAnimId=null;
+let noiseThreshold=5;
+
+// ═══════════════════════════════════════════════════════════════════
+//  LOGGING
+// ═══════════════════════════════════════════════════════════════════
 function log(m,t='ok'){const el=document.getElementById('log'),ts=new Date().toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}),d=document.createElement('div');d.className=`entry ${t}`;d.textContent=`[${ts}] ${m}`;el.prepend(d);while(el.children.length>80)el.removeChild(el.lastChild);}
+
+// ═══════════════════════════════════════════════════════════════════
+//  TRIGGERS
+// ═══════════════════════════════════════════════════════════════════
 function renderTriggers(){const list=document.getElementById('trigger-list');list.innerHTML='';triggers.forEach(t=>{const c=document.createElement('div');c.className='trigger-card';c.id=`tc-${t.id}`;c.innerHTML=`<div class="trigger-top"><span class="trigger-phrase">"${t.phrase}"</span><button class="btn ghost sm" onclick="testTrig(${t.id})">Test</button><button class="btn danger sm" onclick="rmTrig(${t.id})">✕</button></div><div class="trigger-settings"><div class="mini-field"><label>Duration</label><input type="number" value="${t.duration}" min="50" max="5000" step="50" onchange="updTrig(${t.id},'duration',+this.value)"></div><div class="mini-field"><label>Pattern</label><select onchange="updTrig(${t.id},'pattern',this.value)">${['single','double','triple','long','sos'].map(p=>`<option value="${p}" ${p===t.pattern?'selected':''}>${p}</option>`).join('')}</select></div><div class="mini-field"><label>Intensity</label><input type="number" value="${t.intensity}" min="0" max="255" onchange="updTrig(${t.id},'intensity',+this.value)"></div><div class="mini-field"><label>Case</label><select onchange="updTrig(${t.id},'caseSensitive',this.value==='true')"><option value="false" ${!t.caseSensitive?'selected':''}>No</option><option value="true" ${t.caseSensitive?'selected':''}>Yes</option></select></div></div>`;list.appendChild(c);});}
 function addTrigger(){const inp=document.getElementById('new-phrase'),p=inp.value.trim();if(!p)return;triggers.push({id:nextId++,phrase:p,duration:+document.getElementById('g-duration').value,pattern:document.getElementById('g-pattern').value,intensity:+document.getElementById('g-intensity').value,caseSensitive:false});inp.value='';renderTriggers();log(`Added: "${p}"`);}
-function rmTrig(id){triggers=triggers.filter(t=>t.id!==id);renderTriggers();}function updTrig(id,k,v){const t=triggers.find(t=>t.id===id);if(t)t[k]=v;}function testTrig(id){const t=triggers.find(t=>t.id===id);if(t)fireTrig(t);}
-const firedRecently=new Set();function checkTriggers(text){triggers.forEach(t=>{const h=t.caseSensitive?text:text.toLowerCase(),n=t.caseSensitive?t.phrase:t.phrase.toLowerCase();if(h.includes(n)&&!firedRecently.has(t.id)){fireTrig(t);firedRecently.add(t.id);setTimeout(()=>firedRecently.delete(t.id),2000);}});}
+function rmTrig(id){triggers=triggers.filter(t=>t.id!==id);renderTriggers();}
+function updTrig(id,k,v){const t=triggers.find(t=>t.id===id);if(t)t[k]=v;}
+function testTrig(id){const t=triggers.find(t=>t.id===id);if(t)fireTrig(t);}
+const firedRecently=new Set();
+function checkTriggers(text){triggers.forEach(t=>{const h=t.caseSensitive?text:text.toLowerCase(),n=t.caseSensitive?t.phrase:t.phrase.toLowerCase();if(h.includes(n)&&!firedRecently.has(t.id)){fireTrig(t);firedRecently.add(t.id);setTimeout(()=>firedRecently.delete(t.id),2000);}});}
 function fireTrig(t){log(`⚡ "${t.phrase}" → ${t.pattern} ${t.duration}ms`,'fire');const c=document.getElementById(`tc-${t.id}`);if(c){c.classList.add('firing');setTimeout(()=>c.classList.remove('firing'),400);}document.getElementById('badge-fire').style.opacity='1';setTimeout(()=>document.getElementById('badge-fire').style.opacity='0',1000);sendCmd({cmd:'vibrate',phrase:t.phrase,duration:t.duration,pattern:t.pattern,intensity:t.intensity});}
-function setupRecognition(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){log('SpeechRecognition not supported — triggers disabled. Emotion still works.','warn');return false;}recognition=new SR();recognition.continuous=true;recognition.interimResults=true;recognition.lang='en-GB';recognition.onstart=()=>{isListening=true;updateMicUI(true);log('Mic active');};recognition.onend=()=>{if(isListening)try{recognition.start();}catch(e){}};recognition.onerror=e=>{if(e.error!=='no-speech')log(`Speech: ${e.error}`,'err');};recognition.onresult=e=>{let interim='',final='';for(let i=e.resultIndex;i<e.results.length;i++){const txt=e.results[i][0].transcript;if(e.results[i].isFinal)final+=txt;else interim+=txt;}const conf=e.results[e.results.length-1][0].confidence;if(conf>0)document.getElementById('conf-fill').style.width=(conf*100)+'%';if(final){appendTranscript(final);checkTriggers(final);}else{updateInterim(interim);checkTriggers(interim);}};return true;}
-let transcriptText='';function appendTranscript(text){transcriptText+=text+' ';const box=document.getElementById('transcript');let h=transcriptText;triggers.forEach(t=>{const esc=t.phrase.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');h=h.replace(new RegExp(esc,t.caseSensitive?'g':'gi'),m=>`<mark>${m}</mark>`);});box.innerHTML=h+'<span class="interim" id="interim-span"></span>';box.scrollTop=box.scrollHeight;}function updateInterim(text){const sp=document.getElementById('interim-span');if(sp)sp.textContent=text;}
-function toggleMic(){if(isListening){isListening=false;recognition&&recognition.stop();updateMicUI(false);stopCapture();log('Mic stopped.');}else{transcriptText='';document.getElementById('transcript').innerHTML='';if(!recognition&&!setupRecognition()){isListening=true;updateMicUI(true);startCapture();return;}try{recognition.start();}catch(e){}startCapture();}}
+
+// ═══════════════════════════════════════════════════════════════════
+//  WEB SPEECH API (triggers only)
+// ═══════════════════════════════════════════════════════════════════
+function setupRecognition(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){log('SpeechRecognition not supported — triggers disabled','warn');return false;}recognition=new SR();recognition.continuous=true;recognition.interimResults=true;recognition.lang='en-GB';
+  recognition.onstart=()=>{isListening=true;updateMicUI(true);log('Mic active');};
+  recognition.onend=()=>{if(isListening)try{recognition.start();}catch(e){}};
+  recognition.onerror=e=>{if(e.error!=='no-speech')log(`Speech: ${e.error}`,'err');};
+  recognition.onresult=e=>{let interim='',final='';for(let i=e.resultIndex;i<e.results.length;i++){const txt=e.results[i][0].transcript;if(e.results[i].isFinal)final+=txt;else interim+=txt;}const conf=e.results[e.results.length-1][0].confidence;if(conf>0)document.getElementById('conf-fill').style.width=(conf*100)+'%';if(final){appendTranscript(final);checkTriggers(final);}else{updateInterim(interim);checkTriggers(interim);}};return true;}
+
+let transcriptText='';
+function appendTranscript(text){transcriptText+=text+' ';const box=document.getElementById('transcript');let h=transcriptText;triggers.forEach(t=>{const esc=t.phrase.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');h=h.replace(new RegExp(esc,t.caseSensitive?'g':'gi'),m=>`<mark>${m}</mark>`);});box.innerHTML=h+'<span class="interim" id="interim-span"></span>';box.scrollTop=box.scrollHeight;}
+function updateInterim(text){const sp=document.getElementById('interim-span');if(sp)sp.textContent=text;}
+
+function toggleMic(){
+  if(isListening){isListening=false;recognition&&recognition.stop();updateMicUI(false);stopEviCapture();stopVolumeMonitor();log('Mic stopped.');}
+  else{transcriptText='';document.getElementById('transcript').innerHTML='';
+    if(!recognition&&!setupRecognition()){isListening=true;updateMicUI(true);startEviCapture();return;}
+    try{recognition.start();}catch(e){}
+    if(eviWantConnected)startEviCapture();}}
+
 function updateMicUI(on){const btn=document.getElementById('mic-btn');btn.className='mic-btn'+(on?' listening':'');btn.textContent=on?'🔴 Listening…  (click to stop)':'🎤 Start Listening';document.getElementById('dot-mic').className='dot'+(on?' green':'');document.getElementById('label-mic').textContent=on?'Mic active':'Mic off';updateFsMic();}
 function updateFsMic(){const btn=document.getElementById('fs-mic-btn');if(isListening){btn.className='fs-mic listening';btn.textContent='Stop Mic';}else{btn.className='fs-mic';btn.textContent='Start Mic';}}
+
+// ═══════════════════════════════════════════════════════════════════
+//  ESP32 COMMUNICATION
+// ═══════════════════════════════════════════════════════════════════
 function sendCmd(o){const m=JSON.stringify(o);if(currentTab==='ws'){if(ws&&ws.readyState===1){ws.send(m);log(`WS → ${m}`);}else log('WS not connected','warn');}else if(currentTab==='ble'){if(bleChar){bleChar.writeValue(new TextEncoder().encode(m+'\n')).then(()=>log(`BLE → ${m}`)).catch(()=>log('BLE err','err'));}else log('BLE not connected','warn');}else if(currentTab==='usb'){if(serialWriter){serialWriter.write(new TextEncoder().encode(m+'\n')).then(()=>log(`USB → ${m}`)).catch(()=>log('USB err','err'));}else log('USB not connected','warn');}}
 function sendTest(){sendCmd({cmd:'vibrate',phrase:'test',duration:300,pattern:'double',intensity:200});}
-function wsConnect(){const u=document.getElementById('ws-url').value.trim();if(ws)ws.close();log(`Connecting ${u}…`,'warn');ws=new WebSocket(u);ws.onopen=()=>{setConnUI(true,u);log('WS connected');};ws.onclose=()=>{setConnUI(false);log('WS closed','warn');};ws.onerror=()=>log('WS error','err');ws.onmessage=e=>log(`ESP32 → ${e.data}`);}function wsDisconnect(){ws&&ws.close();}
-const NUS_S='6e400001-b5a3-f393-e0a9-e50e24dcca9e',NUS_T='6e400002-b5a3-f393-e0a9-e50e24dcca9e';async function bleConnect(){try{log('Scanning BLE…','warn');const d=await navigator.bluetooth.requestDevice({filters:[{services:[NUS_S]}]});const sv=await(await d.gatt.connect()).getPrimaryService(NUS_S);bleChar=await sv.getCharacteristic(NUS_T);d.addEventListener('gattserverdisconnected',()=>{bleChar=null;setConnUI(false);});setConnUI(true,d.name||'ESP32');log(`BLE: ${d.name}`);}catch(e){log(`BLE: ${e.message}`,'err');}}function bleDisconnect(){bleChar&&bleChar.service.device.gatt.disconnect();}
+function wsConnect(){const u=document.getElementById('ws-url').value.trim();if(ws)ws.close();log(`Connecting ${u}…`,'warn');ws=new WebSocket(u);ws.onopen=()=>{setConnUI(true,u);log('WS connected');};ws.onclose=()=>{setConnUI(false);log('WS closed','warn');};ws.onerror=()=>log('WS error','err');ws.onmessage=e=>log(`ESP32 → ${e.data}`);}
+function wsDisconnect(){ws&&ws.close();}
+const NUS_S='6e400001-b5a3-f393-e0a9-e50e24dcca9e',NUS_T='6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+async function bleConnect(){try{log('Scanning BLE…','warn');const d=await navigator.bluetooth.requestDevice({filters:[{services:[NUS_S]}]});const sv=await(await d.gatt.connect()).getPrimaryService(NUS_S);bleChar=await sv.getCharacteristic(NUS_T);d.addEventListener('gattserverdisconnected',()=>{bleChar=null;setConnUI(false);});setConnUI(true,d.name||'ESP32');log(`BLE: ${d.name}`);}catch(e){log(`BLE: ${e.message}`,'err');}}
+function bleDisconnect(){bleChar&&bleChar.service.device.gatt.disconnect();}
 async function usbConnect(){if(!('serial' in navigator)){log('Web Serial not supported','err');return;}try{serialPort=await navigator.serial.requestPort();const b=+document.getElementById('usb-baud').value;await serialPort.open({baudRate:b});serialWriter=serialPort.writable.getWriter();startSerialReader();setConnUI(true,`USB@${b}`);log(`USB@${b}`);}catch(e){if(e.name==='NotFoundError')log('No port selected','warn');else log(`USB: ${e.message}`,'err');}}
 async function usbDisconnect(){try{if(serialReader){serialReader.cancel();serialReader=null;}if(serialWriter){serialWriter.releaseLock();serialWriter=null;}if(serialPort){await serialPort.close();serialPort=null;}setConnUI(false);log('USB disconnected');}catch(e){}}
 async function startSerialReader(){if(!serialPort?.readable)return;const dec=new TextDecoderStream();serialPort.readable.pipeTo(dec.writable);serialReader=dec.readable.getReader();let buf='';try{while(true){const{value,done}=await serialReader.read();if(done)break;if(value){buf+=value;let nl;while((nl=buf.indexOf('\n'))!==-1){const line=buf.slice(0,nl).trim();buf=buf.slice(nl+1);if(line)log(`ESP32 → ${line}`);}}}}catch(e){if(e.name!=='CancelError')log(`USB read: ${e.message}`,'err');}}
 function setConnUI(c,l=''){document.getElementById('dot-conn').className='dot'+(c?' green':'');document.getElementById('label-conn').textContent=c?l:'Disconnected';}
 function switchTab(t){currentTab=t;['ws','ble','usb'].forEach(x=>{document.getElementById('tab-'+x).className='tab'+(x===t?' active':'');document.getElementById('pane-'+x).style.display=x===t?'block':'none';});}
-async function loadModel(){const btn=document.getElementById('btn-load');btn.disabled=true;btn.textContent='Loading…';const pt=document.getElementById('progress-track'),pf=document.getElementById('progress-fill');pt.style.display='block';pf.style.width='0%';
-  try{if(!TF){document.getElementById('model-status').textContent='Loading Transformers.js…';document.getElementById('model-status').className='model-status-text loading';log('Importing Transformers.js…','warn');TF=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');log('Transformers.js ready.');}
-  const mId=document.getElementById('model-id').value.trim();document.getElementById('model-status').textContent=`Downloading: ${mId}…`;document.getElementById('model-status').className='model-status-text loading';log(`Loading: ${mId}…`,'warn');
-  classifier=await TF.pipeline('audio-classification',mId,{dtype:'q8',progress_callback:p=>{if(p.status==='progress'&&p.progress)pf.style.width=Math.round(p.progress)+'%';}});
-  isModelLoaded=true;document.getElementById('model-status').textContent='Model ready — fully offline!';document.getElementById('model-status').className='model-status-text ready';document.getElementById('dot-model').className='dot green';document.getElementById('label-model').textContent='Model ready';
-  const mb=document.getElementById('mic-btn');mb.disabled=false;mb.textContent='🎤 Start Listening';log('Model loaded.','ok');pt.style.display='none';
-  }catch(err){document.getElementById('model-status').textContent=`Error: ${err.message}`;document.getElementById('model-status').className='model-status-text error';log(`Model failed: ${err.message}`,'err');pt.style.display='none';}btn.disabled=false;btn.textContent='Load Model';}
+
+// ═══════════════════════════════════════════════════════════════════
+//  HUME EVI 3 — WebSocket Connection + Auto-Reconnect
+//  Emotion-only mode: assistant audio muted via session_settings.
+//  Transcript + triggers handled by Web Speech API (unchanged).
+// ═══════════════════════════════════════════════════════════════════
+function eviConnect(){
+  const key=document.getElementById('hume-key').value.trim();
+  if(!key){log('Enter a Hume API key first','warn');return;}
+  eviApiKey=key;eviWantConnected=true;eviReconnectCount=0;eviReconnectDelay=1000;
+  if(eviReconnectTimer){clearTimeout(eviReconnectTimer);eviReconnectTimer=null;}
+  eviOpenSocket();}
+
+function eviOpenSocket(){
+  if(eviWs){try{eviWs.onclose=null;eviWs.close();}catch(e){}eviWs=null;}
+  if(!eviApiKey||!eviWantConnected)return;
+  setEviUI('connecting');
+  log(eviReconnectCount>0?`EVI 3 reconnecting (#${eviReconnectCount})…`:'Connecting to Hume EVI 3…','warn');
+
+  // EVI 3 endpoint — evi_version=3 selects the latest model
+  let url=`wss://api.hume.ai/v0/evi/chat?api_key=${encodeURIComponent(eviApiKey)}&evi_version=3`;
+  const configId=document.getElementById('evi-config').value.trim();
+  if(configId)url+=`&config_id=${encodeURIComponent(configId)}`;
+
+  eviWs=new WebSocket(url);
+
+  eviWs.onopen=()=>{
+    eviReconnectCount=0;eviReconnectDelay=1000;setEviUI('connected');
+    log('EVI 3 connected — emotion tracking active');
+    // Mute assistant audio — we only want emotion scores, not voice replies.
+    // Also suppress assistant text messages to keep the log clean.
+    try{
+      eviWs.send(JSON.stringify({
+        type:'session_settings',
+        audio:{
+          // Tell EVI not to send assistant audio chunks back to us
+          mute_assistant_audio:true
+        }
+      }));
+    }catch(e){}
+    if(isListening)startEviCapture();};
+
+  eviWs.onclose=e=>{
+    if(eviWantConnected){eviReconnectCount++;setEviUI('reconnecting');
+      log(`EVI 3 disconnected (${e.code}) — reconnecting in ${eviReconnectDelay/1000}s…`,'warn');
+      eviReconnectTimer=setTimeout(()=>eviOpenSocket(),eviReconnectDelay);
+      eviReconnectDelay=Math.min(eviReconnectDelay*2,8000);
+    }else setEviUI('off');};
+
+  eviWs.onerror=()=>{if(eviReconnectCount===0)log('EVI 3 error — check API key','err');};
+
+  eviWs.onmessage=e=>{
+    try{
+      const msg=JSON.parse(e.data);
+
+      // ── user_message: contains prosody emotion scores ──────────────
+      // EVI 3 returns models.prosody.scores on every completed user turn.
+      if(msg.type==='user_message'){
+        const scores=msg.models?.prosody?.scores;
+        if(scores){
+          const emotions=Object.entries(scores).map(([name,score])=>({name,score}));
+          const filtered=emotions.filter(em=>TRACKED.has(em.name));
+          const sorted=[...(filtered.length>0?filtered:emotions.slice(0,7))].sort((a,b)=>b.score-a.score);
+          if(sorted.length>0)updateEmotionBox(sorted);
+        }
+      }
+
+      // ── assistant_message / assistant_end: silently ignore ─────────
+      // We muted audio but text events still arrive; drop them quietly.
+
+      // ── error: surface to log ─────────────────────────────────────
+      if(msg.type==='error')log(`EVI 3 error: ${msg.code||''} ${msg.message||JSON.stringify(msg)}`,'err');
+
+    }catch(err){}};}
+
+function eviDisconnect(){
+  eviWantConnected=false;eviApiKey='';
+  if(eviReconnectTimer){clearTimeout(eviReconnectTimer);eviReconnectTimer=null;}
+  stopEviCapture();
+  if(eviWs){try{eviWs.onclose=null;eviWs.close();}catch(e){}eviWs=null;}
+  setEviUI('off');log('EVI 3 disconnected (manual)');}
+
+function setEviUI(state){
+  const d=document.getElementById('dot-evi'),l=document.getElementById('label-evi'),di=document.getElementById('dot-evi-inner'),t=document.getElementById('evi-status-text');
+  if(state==='connected'){d.className='dot green';l.textContent='EVI 3 active';di.className='dot green';t.textContent='Connected — streaming emotion (EVI 3)';}
+  else if(state==='connecting'||state==='reconnecting'){d.className='dot amber';l.textContent=state==='reconnecting'?`Reconnecting (#${eviReconnectCount})`:'Connecting…';di.className='dot amber';t.textContent=state==='reconnecting'?`Auto-reconnecting (#${eviReconnectCount})…`:'Connecting to EVI 3…';}
+  else{d.className='dot';l.textContent='EVI off';di.className='dot';t.textContent='Not connected';}}
+
+// ═══════════════════════════════════════════════════════════════════
+//  EVI AUDIO CAPTURE — MediaRecorder → base64 audio_input chunks
+//  Uses a separate mic stream from Web Speech API so both can run
+//  simultaneously. 200ms requestData intervals match EVI guidance.
+// ═══════════════════════════════════════════════════════════════════
+async function startEviCapture(){
+  if(eviRecorder)return;
+  try{
+    // Request a dedicated mic stream for EVI with processing features
+    // required by EVI (echo cancellation, noise suppression, AGC).
+    eviStream=await navigator.mediaDevices.getUserMedia({
+      audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}
+    });
+
+    // EVI 3 accepts audio/webm (opus) — preferred; fall back to plain webm.
+    const mime=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ?'audio/webm;codecs=opus':'audio/webm';
+    eviRecorder=new MediaRecorder(eviStream,{mimeType:mime});
+
+    eviRecorder.ondataavailable=async(ev)=>{
+      if(ev.data.size<50)return;                          // skip empty/tiny chunks
+      if(!eviWs||eviWs.readyState!==WebSocket.OPEN)return;
+      try{
+        const reader=new FileReader();
+        reader.onloadend=()=>{
+          if(!reader.result)return;
+          const base64=reader.result.split(',')[1];
+          if(base64&&eviWs&&eviWs.readyState===WebSocket.OPEN){
+            // audio_input is the correct EVI 3 message type for mic chunks
+            eviWs.send(JSON.stringify({type:'audio_input',data:base64}));
+          }
+        };
+        reader.readAsDataURL(ev.data);
+      }catch(err){}
+    };
+
+    // start() with no timeslice — use requestData for reliable chunking
+    eviRecorder.start();
+    eviDataInterval=setInterval(()=>{
+      if(eviRecorder&&eviRecorder.state==='recording'){
+        try{eviRecorder.requestData();}catch(e){}}
+    },200);
+
+    // Volume monitor reuses the EVI stream (avoids a third mic request)
+    startVolumeMonitor(eviStream);
+    log('EVI 3 audio streaming started');
+  }catch(err){log(`Mic error: ${err.message}`,'err');}}
+
+function stopEviCapture(){
+  if(eviDataInterval){clearInterval(eviDataInterval);eviDataInterval=null;}
+  if(eviRecorder){try{eviRecorder.stop();}catch(e){}eviRecorder=null;}
+  if(eviStream){eviStream.getTracks().forEach(t=>t.stop());eviStream=null;}
+  stopVolumeMonitor();}
+
+// ═══════════════════════════════════════════════════════════════════
+//  VOLUME MONITOR (for noise gate visual)
+// ═══════════════════════════════════════════════════════════════════
 function updateThreshold(v){noiseThreshold=+v;document.getElementById('threshold-val').textContent=v;document.getElementById('vol-threshold-line').style.left=v+'%';}
-function monitorVolume(){if(!audioAnalyser){volumeMonitorId=requestAnimationFrame(monitorVolume);return;}const data=new Uint8Array(audioAnalyser.fftSize);audioAnalyser.getByteTimeDomainData(data);let sum=0;for(let i=0;i<data.length;i++){const v=(data[i]-128)/128;sum+=v*v;}const vol=Math.min(100,Math.round(Math.sqrt(sum/data.length)*400));const fill=document.getElementById('vol-fill');fill.style.width=vol+'%';fill.className='vol-fill'+(vol>70?' clip':vol>45?' hot':'');const st=document.getElementById('gate-status');if(vol>noiseThreshold){st.textContent='Speaking';st.className='gate-status speaking';}else{st.textContent='Quiet';st.className='gate-status';}volumeMonitorId=requestAnimationFrame(monitorVolume);}
-async function startCapture(){if(audioProcessor)return;if(!isModelLoaded){log('Load model first','warn');return;}try{audioStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});audioCtx=new(window.AudioContext||window.webkitAudioContext)();const src=audioCtx.createMediaStreamSource(audioStream);audioAnalyser=audioCtx.createAnalyser();audioAnalyser.fftSize=2048;src.connect(audioAnalyser);audioProcessor=audioCtx.createScriptProcessor(4096,1,1);pcmBuffer=[];const gain=audioCtx.createGain();gain.gain.value=0;audioAnalyser.connect(audioProcessor);audioProcessor.connect(gain);gain.connect(audioCtx.destination);audioProcessor.onaudioprocess=e=>{if(isListening)pcmBuffer.push(new Float32Array(e.inputBuffer.getChannelData(0)));};monitorVolume();classifyTimer=setInterval(()=>{if(isClassifying){log('Classify busy — skipping cycle','warn');return;}classifyChunk();},5000);log('Audio capture started (5s cycles)');}catch(err){log(`Mic: ${err.message}`,'err');}}
-function stopCapture(){if(classifyTimer){clearInterval(classifyTimer);classifyTimer=null;}if(volumeMonitorId){cancelAnimationFrame(volumeMonitorId);volumeMonitorId=null;}if(audioProcessor){try{audioProcessor.disconnect();}catch(e){}audioProcessor=null;}if(audioAnalyser){try{audioAnalyser.disconnect();}catch(e){}audioAnalyser=null;}if(audioCtx){try{audioCtx.close();}catch(e){}audioCtx=null;}if(audioStream){audioStream.getTracks().forEach(t=>t.stop());audioStream=null;}pcmBuffer=[];document.getElementById('vol-fill').style.width='0%';document.getElementById('gate-status').textContent='Quiet';document.getElementById('gate-status').className='gate-status';}
-async function classifyChunk(){if(isClassifying||pcmBuffer.length===0||!classifier)return;isClassifying=true;try{const totalLen=pcmBuffer.reduce((s,c)=>s+c.length,0);if(totalLen<8000){isClassifying=false;return;}const combined=new Float32Array(totalLen);let off=0;for(const c of pcmBuffer){combined.set(c,off);off+=c.length;}pcmBuffer=[];let sum=0;for(let i=0;i<combined.length;i++)sum+=combined[i]*combined[i];const rms=Math.sqrt(sum/combined.length),vol=Math.min(100,Math.round(rms*400));if(vol<noiseThreshold){log(`Gate: dropped (${vol}%<${noiseThreshold}%)`,'warn');isClassifying=false;return;}const srcRate=audioCtx?audioCtx.sampleRate:44100;const a16=resample(combined,srcRate,16000);log(`Classifying ${(a16.length/16000).toFixed(1)}s audio…`);const timeoutPromise=new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),15000));const results=await Promise.race([classifier(a16,{top_k:8}),timeoutPromise]);if(results?.length>0){log(`Model raw: ${results.slice(0,4).map(r=>r.label+'='+r.score.toFixed(2)).join(', ')}`);const mapped=results.map(r=>({name:friendlyName(r.label),score:r.score,orig:r.label}));const filtered=mapped.filter(e=>TRACKED.has(e.name));if(filtered.length>0){updateEmotionBox(filtered);}else{log(`Filter miss. Labels: ${mapped.map(m=>m.name).join(', ')}`,'warn');updateEmotionBox(mapped.slice(0,7));}}}catch(err){console.error(err);log(`Classify: ${err.message}`,'err');}isClassifying=false;}
-function resample(d,from,to){if(from===to)return d;const r=to/from,len=Math.round(d.length*r),out=new Float32Array(len);for(let i=0;i<len;i++){const s=i/r,lo=Math.floor(s),hi=Math.min(lo+1,d.length-1),f=s-lo;out[i]=d[lo]*(1-f)+d[hi]*f;}return out;}
-const blobCanvas=document.getElementById('blob-canvas'),blobCtx=blobCanvas.getContext('2d');let blobs=[],blobAnimId=null,blobTime=0;
+
+function startVolumeMonitor(stream){
+  if(monitorAnalyser)return;
+  monitorCtx=new(window.AudioContext||window.webkitAudioContext)();
+  const src=monitorCtx.createMediaStreamSource(stream);
+  monitorAnalyser=monitorCtx.createAnalyser();monitorAnalyser.fftSize=2048;
+  src.connect(monitorAnalyser);
+  function tick(){
+    if(!monitorAnalyser){return;}
+    const data=new Uint8Array(monitorAnalyser.fftSize);monitorAnalyser.getByteTimeDomainData(data);
+    let sum=0;for(let i=0;i<data.length;i++){const v=(data[i]-128)/128;sum+=v*v;}
+    const vol=Math.min(100,Math.round(Math.sqrt(sum/data.length)*400));
+    const fill=document.getElementById('vol-fill');fill.style.width=vol+'%';
+    fill.className='vol-fill'+(vol>70?' clip':vol>45?' hot':'');
+    const st=document.getElementById('gate-status');
+    if(vol>noiseThreshold){st.textContent='Speaking';st.className='gate-status speaking';}
+    else{st.textContent='Quiet';st.className='gate-status';}
+    volumeAnimId=requestAnimationFrame(tick);}
+  tick();}
+
+function stopVolumeMonitor(){
+  if(volumeAnimId){cancelAnimationFrame(volumeAnimId);volumeAnimId=null;}
+  if(monitorAnalyser){try{monitorAnalyser.disconnect();}catch(e){}monitorAnalyser=null;}
+  if(monitorCtx){try{monitorCtx.close();}catch(e){}monitorCtx=null;}
+  document.getElementById('vol-fill').style.width='0%';
+  const st=document.getElementById('gate-status');st.textContent='Quiet';st.className='gate-status';}
+
+// ═══════════════════════════════════════════════════════════════════
+//  BLOB ANIMATION ENGINE
+// ═══════════════════════════════════════════════════════════════════
+const blobCanvas=document.getElementById('blob-canvas'),blobCtx=blobCanvas.getContext('2d');
+let blobs=[],blobAnimId=null,blobTime=0;
 function createBlob(i,total,color,name,score,w,h){const cx=w/2,cy=h/2,maxR=Math.min(w,h)*0.44,s=isFinite(score)?score:0.1;const angle=(i/Math.max(total,1))*Math.PI*2+Math.random()*0.6,dist=maxR*0.22*(0.3+Math.random()*0.7),baseR=Math.max(maxR*(0.5+s*0.5),12);return{x:cx+Math.cos(angle)*dist,y:cy+Math.sin(angle)*dist,targetX:cx+Math.cos(angle)*dist,targetY:cy+Math.sin(angle)*dist,radius:0,targetRadius:baseR,color,alpha:0,targetAlpha:0.55+s*0.45,phase:Math.random()*Math.PI*2,speed:0.3+Math.random()*0.4,wobbleAmp:0.10+Math.random()*0.08,name,score:s};}
 function hexToRgb(h){if(!h||h.length<7)return{r:128,g:128,b:128};return{r:parseInt(h.slice(1,3),16)||0,g:parseInt(h.slice(3,5),16)||0,b:parseInt(h.slice(5,7),16)||0};}
 function drawBlobPath(ctx,x,y,r,phase,amp,time){const pts=80;ctx.beginPath();for(let i=0;i<=pts;i++){const a=(i/pts)*Math.PI*2,w=1+Math.sin(a*3+phase+time*0.8)*amp+Math.sin(a*5-phase*1.3+time*0.5)*amp*0.6+Math.sin(a*2+phase*0.7+time*1.1)*amp*0.4,pr=r*w;if(i===0)ctx.moveTo(x+Math.cos(a)*pr,y+Math.sin(a)*pr);else ctx.lineTo(x+Math.cos(a)*pr,y+Math.sin(a)*pr);}ctx.closePath();}
-function renderBlobs(){try{const canvas=blobCanvas,box=document.getElementById('emotion-box'),rect=box.getBoundingClientRect();if(rect.width===0){blobAnimId=requestAnimationFrame(renderBlobs);return;}const dpr=window.devicePixelRatio||1,tw=Math.round(rect.width*dpr),th=Math.round(rect.height*dpr);if(canvas.width!==tw||canvas.height!==th){canvas.width=tw;canvas.height=th;canvas.style.width=rect.width+'px';canvas.style.height=rect.height+'px';blobCtx.setTransform(dpr,0,0,dpr,0,0);}const w=rect.width,h=rect.height,ctx=blobCtx;ctx.clearRect(0,0,w,h);ctx.fillStyle='#f5f5f3';ctx.fillRect(0,0,w,h);blobTime+=0.016;blobs.forEach(b=>{b.radius+=(b.targetRadius-b.radius)*0.06;b.alpha+=(b.targetAlpha-b.alpha)*0.06;b.x+=(b.targetX-b.x)*0.03;b.y+=(b.targetY-b.y)*0.03;if(b.radius<2)return;const dx=Math.sin(blobTime*b.speed*0.4+b.phase)*b.radius*0.08,dy=Math.cos(blobTime*b.speed*0.3+b.phase*1.5)*b.radius*0.06,rgb=hexToRgb(b.color),cx=b.x+dx,cy=b.y+dy,outerR=Math.max(b.radius*1.3,3),grd=ctx.createRadialGradient(cx,cy,0,cx,cy,outerR);grd.addColorStop(0,`rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha})`);grd.addColorStop(0.35,`rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha*0.85})`);grd.addColorStop(0.65,`rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha*0.5})`);grd.addColorStop(1,`rgba(${rgb.r},${rgb.g},${rgb.b},0)`);ctx.save();drawBlobPath(ctx,cx,cy,b.radius,b.phase,b.wobbleAmp,blobTime);ctx.fillStyle=grd;ctx.fill();if(b.radius>10){const ir=Math.max(b.radius*0.65,3),ig=ctx.createRadialGradient(cx-b.radius*0.1,cy-b.radius*0.12,0,cx,cy,ir),rr=Math.min(255,rgb.r+80),gg=Math.min(255,rgb.g+80),bb=Math.min(255,rgb.b+80);ig.addColorStop(0,`rgba(${rr},${gg},${bb},${b.alpha*0.9})`);ig.addColorStop(0.5,`rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha*0.4})`);ig.addColorStop(1,`rgba(${rgb.r},${rgb.g},${rgb.b},0)`);drawBlobPath(ctx,cx,cy,b.radius*0.6,b.phase+1,b.wobbleAmp*0.7,blobTime*1.2);ctx.fillStyle=ig;ctx.fill();}ctx.restore();});ctx.save();ctx.globalCompositeOperation='overlay';const sg=ctx.createRadialGradient(w*0.35,h*0.28,0,w*0.5,h*0.5,Math.max(w,h)*0.55);sg.addColorStop(0,'rgba(255,255,255,0.22)');sg.addColorStop(0.5,'rgba(255,255,255,0.05)');sg.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=sg;ctx.fillRect(0,0,w,h);ctx.restore();}catch(e){console.error('Blob:',e);}blobAnimId=requestAnimationFrame(renderBlobs);}renderBlobs();
-function updateEmotionBox(emotions){const sorted=[...emotions].sort((a,b)=>b.score-a.score),top=sorted[0];if(!top)return;document.getElementById('emo-label').textContent=top.name;document.getElementById('emo-score').textContent=`${(top.score*100).toFixed(1)}%`;document.getElementById('emo-list').textContent=sorted.slice(1).map(e=>`${e.name} ${(e.score*100).toFixed(0)}%`).join('  ·  ');const box=document.getElementById('emotion-box'),rect=box.getBoundingClientRect(),w=rect.width,h=rect.height;const newBlobs=sorted.map((em,i)=>{const col=getEC(em.orig||em.name),b=createBlob(i,sorted.length,col.bg,em.name,em.score,w,h),existing=blobs[i];if(existing){b.x=existing.x;b.y=existing.y;b.radius=existing.radius;b.alpha=existing.alpha;b.phase=existing.phase;}return b;});blobs=newBlobs;log(`🎭 ${top.name} ${(top.score*100).toFixed(0)}%`,'emo');}
-let isFS=false;function toggleFS(){const box=document.getElementById('emotion-box');isFS=!isFS;if(isFS){box.classList.add('fullscreen');const btn=document.createElement('button');btn.className='fs-close';btn.innerHTML='✕';btn.onclick=e=>{e.stopPropagation();toggleFS();};box.appendChild(btn);box.querySelector('.emotion-hint').textContent='click or ✕ to exit • ESC';updateFsMic();}else{box.classList.remove('fullscreen');const btn=box.querySelector('.fs-close');if(btn)btn.remove();box.querySelector('.emotion-hint').textContent='click to fullscreen';}}document.addEventListener('keydown',e=>{if(e.key==='Escape'&&isFS)toggleFS();});
-const PIN_HASH='2cec8cf0e321c284fa0c2ebef804aac18bf1cbb85546f89e7e3d0b6aa8b9d2cf';let pinEntry='';
+function renderBlobs(){try{const canvas=blobCanvas,box=document.getElementById('emotion-box'),rect=box.getBoundingClientRect();if(rect.width===0){blobAnimId=requestAnimationFrame(renderBlobs);return;}const dpr=window.devicePixelRatio||1,tw=Math.round(rect.width*dpr),th=Math.round(rect.height*dpr);if(canvas.width!==tw||canvas.height!==th){canvas.width=tw;canvas.height=th;canvas.style.width=rect.width+'px';canvas.style.height=rect.height+'px';blobCtx.setTransform(dpr,0,0,dpr,0,0);}const w=rect.width,h=rect.height,ctx=blobCtx;ctx.clearRect(0,0,w,h);ctx.fillStyle='#f5f5f3';ctx.fillRect(0,0,w,h);blobTime+=0.016;blobs.forEach(b=>{b.radius+=(b.targetRadius-b.radius)*0.06;b.alpha+=(b.targetAlpha-b.alpha)*0.06;b.x+=(b.targetX-b.x)*0.03;b.y+=(b.targetY-b.y)*0.03;if(b.radius<2)return;const dx=Math.sin(blobTime*b.speed*0.4+b.phase)*b.radius*0.08,dy=Math.cos(blobTime*b.speed*0.3+b.phase*1.5)*b.radius*0.06,rgb=hexToRgb(b.color),cx=b.x+dx,cy=b.y+dy,outerR=Math.max(b.radius*1.3,3),grd=ctx.createRadialGradient(cx,cy,0,cx,cy,outerR);grd.addColorStop(0,`rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha})`);grd.addColorStop(0.35,`rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha*0.85})`);grd.addColorStop(0.65,`rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha*0.5})`);grd.addColorStop(1,`rgba(${rgb.r},${rgb.g},${rgb.b},0)`);ctx.save();drawBlobPath(ctx,cx,cy,b.radius,b.phase,b.wobbleAmp,blobTime);ctx.fillStyle=grd;ctx.fill();if(b.radius>10){const ir=Math.max(b.radius*0.65,3),ig=ctx.createRadialGradient(cx-b.radius*0.1,cy-b.radius*0.12,0,cx,cy,ir),rr=Math.min(255,rgb.r+80),gg=Math.min(255,rgb.g+80),bb=Math.min(255,rgb.b+80);ig.addColorStop(0,`rgba(${rr},${gg},${bb},${b.alpha*0.9})`);ig.addColorStop(0.5,`rgba(${rgb.r},${rgb.g},${rgb.b},${b.alpha*0.4})`);ig.addColorStop(1,`rgba(${rgb.r},${rgb.g},${rgb.b},0)`);drawBlobPath(ctx,cx,cy,b.radius*0.6,b.phase+1,b.wobbleAmp*0.7,blobTime*1.2);ctx.fillStyle=ig;ctx.fill();}ctx.restore();});ctx.save();ctx.globalCompositeOperation='overlay';const sg=ctx.createRadialGradient(w*0.35,h*0.28,0,w*0.5,h*0.5,Math.max(w,h)*0.55);sg.addColorStop(0,'rgba(255,255,255,0.22)');sg.addColorStop(0.5,'rgba(255,255,255,0.05)');sg.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=sg;ctx.fillRect(0,0,w,h);ctx.restore();}catch(e){console.error('Blob:',e);}blobAnimId=requestAnimationFrame(renderBlobs);}
+renderBlobs();
+
+// ═══════════════════════════════════════════════════════════════════
+//  UPDATE EMOTION BLOBS
+// ═══════════════════════════════════════════════════════════════════
+function updateEmotionBox(sorted){
+  const top=sorted[0];if(!top)return;
+  document.getElementById('emo-label').textContent=top.name;
+  document.getElementById('emo-score').textContent=`${(top.score*100).toFixed(1)}%`;
+  document.getElementById('emo-list').textContent=sorted.slice(1).map(e=>`${e.name} ${(e.score*100).toFixed(0)}%`).join('  ·  ');
+  const box=document.getElementById('emotion-box'),rect=box.getBoundingClientRect(),w=rect.width,h=rect.height;
+  const newBlobs=sorted.map((em,i)=>{const col=getEC(em.name),b=createBlob(i,sorted.length,col.bg,em.name,em.score,w,h),existing=blobs[i];if(existing){b.x=existing.x;b.y=existing.y;b.radius=existing.radius;b.alpha=existing.alpha;b.phase=existing.phase;}return b;});
+  blobs=newBlobs;log(`🎭 ${top.name} ${(top.score*100).toFixed(0)}%`,'emo');}
+
+// ═══════════════════════════════════════════════════════════════════
+//  FULLSCREEN
+// ═══════════════════════════════════════════════════════════════════
+let isFS=false;
+function toggleFS(){const box=document.getElementById('emotion-box');isFS=!isFS;if(isFS){box.classList.add('fullscreen');const btn=document.createElement('button');btn.className='fs-close';btn.innerHTML='✕';btn.onclick=e=>{e.stopPropagation();toggleFS();};box.appendChild(btn);box.querySelector('.emotion-hint').textContent='click or ✕ to exit • ESC';updateFsMic();}else{box.classList.remove('fullscreen');const btn=box.querySelector('.fs-close');if(btn)btn.remove();box.querySelector('.emotion-hint').textContent='click to fullscreen';}}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&isFS)toggleFS();});
+
+// ═══════════════════════════════════════════════════════════════════
+//  PIN LOCK
+// ═══════════════════════════════════════════════════════════════════
+const PIN_HASH='2cec8cf0e321c284fa0c2ebef804aac18bf1cbb85546f89e7e3d0b6aa8b9d2cf';
+let pinEntry='';
 async function hashPin(pin){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pin));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
-function pinPress(d){if(pinEntry.length>=4)return;pinEntry+=d;updatePinDots();if(pinEntry.length===4)setTimeout(()=>checkPin(),200);}function pinBack(){pinEntry=pinEntry.slice(0,-1);updatePinDots();document.getElementById('lock-error').textContent='';}function pinClear(){pinEntry='';updatePinDots();document.getElementById('lock-error').textContent='';}
+function pinPress(d){if(pinEntry.length>=4)return;pinEntry+=d;updatePinDots();if(pinEntry.length===4)setTimeout(()=>checkPin(),200);}
+function pinBack(){pinEntry=pinEntry.slice(0,-1);updatePinDots();document.getElementById('lock-error').textContent='';}
+function pinClear(){pinEntry='';updatePinDots();document.getElementById('lock-error').textContent='';}
 function updatePinDots(){for(let i=0;i<4;i++)document.getElementById('pd'+i).className='pin-dot'+(i<pinEntry.length?' filled':'');}
-async function checkPin(){const h=await hashPin(pinEntry);if(h===PIN_HASH){document.getElementById('lock-screen').classList.add('hidden');document.getElementById('main-layout').style.display='';log('Ready. 1) Load model  2) Connect ESP32  3) Start mic','ok');}else{document.getElementById('lock-error').textContent='Incorrect PIN';for(let i=0;i<4;i++)document.getElementById('pd'+i).className='pin-dot wrong';setTimeout(()=>{pinEntry='';updatePinDots();},600);}}
+async function checkPin(){const h=await hashPin(pinEntry);if(h===PIN_HASH){document.getElementById('lock-screen').classList.add('hidden');document.getElementById('main-layout').style.display='';log('Ready. 1) Paste API key & Connect EVI 3  2) Connect ESP32  3) Start mic','ok');}else{document.getElementById('lock-error').textContent='Incorrect PIN';for(let i=0;i<4;i++)document.getElementById('pd'+i).className='pin-dot wrong';setTimeout(()=>{pinEntry='';updatePinDots();},600);}}
 document.addEventListener('keydown',e=>{const lock=document.getElementById('lock-screen');if(lock.classList.contains('hidden'))return;if(e.key>='0'&&e.key<='9')pinPress(e.key);else if(e.key==='Backspace')pinBack();else if(e.key==='Escape')pinClear();});
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════
 renderTriggers();
 </script>
 </body>
