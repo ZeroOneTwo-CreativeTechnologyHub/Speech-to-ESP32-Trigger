@@ -161,22 +161,73 @@ function fireTrig(t){log(`⚡ "${t.phrase}" → ${t.pattern} ${t.duration}ms`,'f
 // ═══════════════════════════════════════════════════════════════════
 //  WEB SPEECH API (triggers only)
 // ═══════════════════════════════════════════════════════════════════
-function setupRecognition(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){log('SpeechRecognition not supported — triggers disabled','warn');return false;}recognition=new SR();recognition.continuous=true;recognition.interimResults=true;recognition.lang='en-GB';
-  recognition.onstart=()=>{isListening=true;updateMicUI(true);log('Mic active');};
-  recognition.onend=()=>{if(isListening)try{recognition.start();}catch(e){}};
-  recognition.onerror=e=>{if(e.error!=='no-speech')log(`Speech: ${e.error}`,'err');};
-  recognition.onresult=e=>{let interim='',final='';for(let i=e.resultIndex;i<e.results.length;i++){const txt=e.results[i][0].transcript;if(e.results[i].isFinal)final+=txt;else interim+=txt;}const conf=e.results[e.results.length-1][0].confidence;if(conf>0)document.getElementById('conf-fill').style.width=(conf*100)+'%';if(final){appendTranscript(final);checkTriggers(final);}else{updateInterim(interim);checkTriggers(interim);}};return true;}
+function setupRecognition(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){log('SpeechRecognition not supported — triggers disabled','warn');return false;}
+  recognition=new SR();recognition.continuous=true;recognition.interimResults=true;recognition.lang='en-GB';
+
+  recognition.onstart=()=>{isListening=true;updateMicUI(true);log('Mic active — listening for triggers');};
+
+  // Use a 300ms delay before restarting. Without it, Chrome fires onend→start→onend
+  // in a tight loop when another getUserMedia stream (EVI) is open, causing 'aborted'
+  // errors that silently kill recognition.
+  recognition.onend=()=>{
+    if(isListening){
+      setTimeout(()=>{
+        if(isListening){try{recognition.start();}catch(e){log(`Speech restart: ${e.message}`,'err');}}
+      },300);
+    }
+  };
+
+  recognition.onerror=e=>{
+    if(e.error==='no-speech'||e.error==='aborted')return; // normal — onend handles restart
+    log(`Speech error: ${e.error}`,'err');
+    if(e.error==='not-allowed'){isListening=false;updateMicUI(false);}
+  };
+
+  recognition.onresult=e=>{
+    let interim='',final='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const txt=e.results[i][0].transcript;
+      if(e.results[i].isFinal)final+=txt;else interim+=txt;
+    }
+    const conf=e.results[e.results.length-1][0].confidence;
+    if(conf>0)document.getElementById('conf-fill').style.width=(conf*100)+'%';
+    if(final){appendTranscript(final);checkTriggers(final);}
+    else{updateInterim(interim);checkTriggers(interim);}
+  };
+  return true;
+}
 
 let transcriptText='';
 function appendTranscript(text){transcriptText+=text+' ';const box=document.getElementById('transcript');let h=transcriptText;triggers.forEach(t=>{const esc=t.phrase.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');h=h.replace(new RegExp(esc,t.caseSensitive?'g':'gi'),m=>`<mark>${m}</mark>`);});box.innerHTML=h+'<span class="interim" id="interim-span"></span>';box.scrollTop=box.scrollHeight;}
 function updateInterim(text){const sp=document.getElementById('interim-span');if(sp)sp.textContent=text;}
 
 function toggleMic(){
-  if(isListening){isListening=false;recognition&&recognition.stop();updateMicUI(false);stopEviCapture();stopVolumeMonitor();log('Mic stopped.');}
-  else{transcriptText='';document.getElementById('transcript').innerHTML='';
-    if(!recognition&&!setupRecognition()){isListening=true;updateMicUI(true);startEviCapture();return;}
-    try{recognition.start();}catch(e){}
-    if(eviWantConnected)startEviCapture();}}
+  if(isListening){
+    isListening=false;
+    recognition&&recognition.stop();
+    updateMicUI(false);
+    stopEviCapture();
+    stopVolumeMonitor();
+    log('Mic stopped.');
+  } else {
+    transcriptText='';
+    document.getElementById('transcript').innerHTML='';
+    // Set up Web Speech API if not already done
+    if(!recognition&&!setupRecognition()){
+      // setupRecognition failed (browser unsupported) — still allow EVI-only mode
+      isListening=true;updateMicUI(true);
+      if(eviWantConnected)startEviCapture();
+      return;
+    }
+    // Start Web Speech recognition (it manages its own mic access internally)
+    try{recognition.start();}catch(e){log(`Could not start speech recognition: ${e.message}`,'err');}
+    // Start EVI audio capture only if EVI is connected.
+    // startEviCapture is guarded against double-start (returns early if eviRecorder exists).
+    if(eviWantConnected)startEviCapture();
+  }
+}
 
 function updateMicUI(on){const btn=document.getElementById('mic-btn');btn.className='mic-btn'+(on?' listening':'');btn.textContent=on?'🔴 Listening…  (click to stop)':'🎤 Start Listening';document.getElementById('dot-mic').className='dot'+(on?' green':'');document.getElementById('label-mic').textContent=on?'Mic active':'Mic off';updateFsMic();}
 function updateFsMic(){const btn=document.getElementById('fs-mic-btn');if(isListening){btn.className='fs-mic listening';btn.textContent='Stop Mic';}else{btn.className='fs-mic';btn.textContent='Start Mic';}}
