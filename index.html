@@ -163,14 +163,14 @@ function fireTrig(t){log(`⚡ "${t.phrase}" → ${t.pattern} ${t.duration}ms`,'f
 // ═══════════════════════════════════════════════════════════════════
 function setupRecognition(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){log('SpeechRecognition not supported — triggers disabled','warn');return false;}
+  if(!SR){
+    log('⚠ Web Speech API not available in this browser/context. Use Chrome on GitHub Pages for trigger support.','warn');
+    return false;
+  }
   recognition=new SR();recognition.continuous=true;recognition.interimResults=true;recognition.lang='en-GB';
 
   recognition.onstart=()=>{isListening=true;updateMicUI(true);log('Mic active — listening for triggers');};
 
-  // Use a 300ms delay before restarting. Without it, Chrome fires onend→start→onend
-  // in a tight loop when another getUserMedia stream (EVI) is open, causing 'aborted'
-  // errors that silently kill recognition.
   recognition.onend=()=>{
     if(isListening){
       setTimeout(()=>{
@@ -180,7 +180,7 @@ function setupRecognition(){
   };
 
   recognition.onerror=e=>{
-    if(e.error==='no-speech'||e.error==='aborted')return; // normal — onend handles restart
+    if(e.error==='no-speech'||e.error==='aborted')return;
     log(`Speech error: ${e.error}`,'err');
     if(e.error==='not-allowed'){isListening=false;updateMicUI(false);}
   };
@@ -214,17 +214,18 @@ function toggleMic(){
   } else {
     transcriptText='';
     document.getElementById('transcript').innerHTML='';
-    // Set up Web Speech API if not already done
     if(!recognition&&!setupRecognition()){
-      // setupRecognition failed (browser unsupported) — still allow EVI-only mode
+      // Web Speech API unavailable — run in EVI-transcript-only mode.
+      // EVI's user_message transcript will feed triggers + display instead.
+      if(!eviWantConnected){log('Connect EVI first, or use Chrome for full trigger support.','warn');return;}
       isListening=true;updateMicUI(true);
-      if(eviWantConnected)startEviCapture();
+      startEviCapture();
+      log('Mic active — using EVI transcripts for triggers');
       return;
     }
-    // Start Web Speech recognition (it manages its own mic access internally)
+    // Web Speech API available — start it (manages its own mic internally).
     try{recognition.start();}catch(e){log(`Could not start speech recognition: ${e.message}`,'err');}
-    // Start EVI audio capture only if EVI is connected.
-    // startEviCapture is guarded against double-start (returns early if eviRecorder exists).
+    // Also start EVI audio capture if EVI is connected.
     if(eviWantConnected)startEviCapture();
   }
 }
@@ -276,17 +277,9 @@ function eviOpenSocket(){
   eviWs.onopen=()=>{
     eviReconnectCount=0;eviReconnectDelay=1000;setEviUI('connected');
     log('EVI 3 connected — emotion tracking active');
-    // Mute assistant audio — we only want emotion scores, not voice replies.
-    // Also suppress assistant text messages to keep the log clean.
-    try{
-      eviWs.send(JSON.stringify({
-        type:'session_settings',
-        audio:{
-          // Tell EVI not to send assistant audio chunks back to us
-          mute_assistant_audio:true
-        }
-      }));
-    }catch(e){}
+    // Silence the assistant's voice responses — we only want emotion scores.
+    // pause_assistant_message is still valid in EVI 3 and requires no extra fields.
+    try{eviWs.send(JSON.stringify({type:'pause_assistant_message'}));}catch(e){}
     if(isListening)startEviCapture();};
 
   eviWs.onclose=e=>{
@@ -311,6 +304,17 @@ function eviOpenSocket(){
           const filtered=emotions.filter(em=>TRACKED.has(em.name));
           const sorted=[...(filtered.length>0?filtered:emotions.slice(0,7))].sort((a,b)=>b.score-a.score);
           if(sorted.length>0)updateEmotionBox(sorted);
+        }
+        // ── EVI transcript fallback for triggers + display ─────────────
+        // If Web Speech API is unavailable (recognition===null), use EVI's
+        // own transcript so trigger phrases and the live transcript panel
+        // still work. EVI only fires this on a completed user turn (final).
+        if(!recognition){
+          const transcript=msg.message?.content||msg.transcript||'';
+          if(transcript){
+            appendTranscript(transcript);
+            checkTriggers(transcript);
+          }
         }
       }
 
